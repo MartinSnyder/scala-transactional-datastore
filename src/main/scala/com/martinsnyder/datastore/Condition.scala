@@ -1,5 +1,5 @@
 package com.martinsnyder.datastore
 
-trait Condition
+sealed trait Condition
 
 case class EqualsCondition[T](fieldName: String, value: T) extends Condition
