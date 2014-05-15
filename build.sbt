@@ -4,7 +4,7 @@ organization in ThisBuild := "com.martinsnyder"
 
 version in ThisBuild := "0.0.1"
 
-scalaVersion in ThisBuild := "2.10.4"
+scalaVersion in ThisBuild := "2.11.0"
 
 ideaExcludeFolders ++= Seq(".idea", ".idea_modules")
 

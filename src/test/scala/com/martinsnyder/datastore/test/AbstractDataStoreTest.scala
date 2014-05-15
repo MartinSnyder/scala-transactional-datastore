@@ -83,5 +83,27 @@ abstract class AbstractDataStoreTest extends FunSpec {
         assert(transaction1Result.isFailure)
       })
     }
+
+    it("lets me delete a stored record") {
+      val myRecord = MyRecord("testDelete")
+
+      val insertResult = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      assert(insertResult.isSuccess)
+
+      // Should NOT be permitted to insert it again
+      val duplicateInsert1Result = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      assert(duplicateInsert1Result.isFailure)
+
+      val records = dataStore.withConnection(_.loadRecords[MyRecord](EqualsCondition("value", "testDelete")))
+      assert(records == Success(Seq(myRecord)))
+
+      val deleteResult = dataStore.withConnection(_.inTransaction(_.deleteRecords[MyRecord](EqualsCondition("value", "testDelete"))))
+      assert(deleteResult == Success(Seq(MyRecord("testDelete"))))
+
+      // Should be permitted to insert it again
+      val duplicateInsert2Result = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      assert(duplicateInsert2Result.isSuccess)
+    }
+
   }
 }

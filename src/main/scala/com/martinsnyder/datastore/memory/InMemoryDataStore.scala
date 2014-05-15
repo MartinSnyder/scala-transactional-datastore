@@ -8,9 +8,11 @@ import com.martinsnyder.datastore.DataStore.ConstraintViolation
 object InMemoryDataStore {
   sealed trait TransactionOperation
   case class InsertOperation(records: Seq[Record]) extends TransactionOperation
+  case class DeleteOperation(recordClass: Class[_], condition: Condition, records: Seq[Record]) extends TransactionOperation
 
   sealed trait ConstraintEnforcer {
     def add(records: Seq[Record]): Try[ConstraintEnforcer]
+    def remove(records: Seq[Record]): Try[ConstraintEnforcer]
   }
 
   object ConstraintEnforcer {
@@ -32,6 +34,11 @@ object InMemoryDataStore {
 
       new UniqueConstraintEnforcer(constraint, existingValues ++ valuesSet)
     })
+
+    override def remove(records: Seq[Record]): Try[ConstraintEnforcer] = Try({
+      var values = records.map(record => record.getClass.getMethod(constraint.fieldName).invoke(record)).toSet
+      new UniqueConstraintEnforcer(constraint, existingValues -- values)
+    })
   }
 
   class ConstrainedRecords(private var storedRecords: List[Record],
@@ -45,8 +52,8 @@ object InMemoryDataStore {
       }))
     )
 
-    private def applyConstraints(records: Seq[Record]): Try[List[ConstraintEnforcer]] = {
-      val triedEnforcers = constraintEnforcers.map(_.add(records))
+    private def applyConstraints(records: Seq[Record], operation: ConstraintEnforcer => Try[ConstraintEnforcer]): Try[List[ConstraintEnforcer]] = {
+      val triedEnforcers = constraintEnforcers.map(operation)
       triedEnforcers.find(_.isFailure) match {
         case Some(failure) =>
           failure.map(List(_))
@@ -57,7 +64,7 @@ object InMemoryDataStore {
 
     def addRecords(records: Seq[Record]): Try[Unit] = synchronized(
       for (
-        nextEnforcers <- applyConstraints(records);
+        nextEnforcers <- applyConstraints(records, _.add(records));
         nextRecords <- Try(records.toList ::: storedRecords)
       )
       yield {
@@ -66,9 +73,24 @@ object InMemoryDataStore {
       }
     )
 
+    def deleteRecords(recordClass: Class[_], condition: Condition): Try[Seq[Record]] = synchronized(
+      for (
+        records <- filter(recordClass, condition);
+        nextEnforcers <- applyConstraints(records, _.remove(records));
+        nextRecords <- Try(records.toList ::: storedRecords)
+      )
+      yield {
+        storedRecords = nextRecords
+        constraintEnforcers = nextEnforcers
+
+        records
+      }
+    )
+
     def applyOperations(operations: Seq[TransactionOperation]): Try[Unit] = synchronized({
       val triedOperations = operations.map({
         case InsertOperation(records) => addRecords(records)
+        case DeleteOperation(recordClass, condition, expectedRecords) => deleteRecords(recordClass, condition)
       })
 
       triedOperations.find(_.isFailure) match {
@@ -115,6 +137,14 @@ class InMemoryDataStore(constraints: Seq[Constraint] = Nil) extends DataStore {
       transactionContext.addRecords(records).map(_ => {
         transactionOperations = InsertOperation(records) :: transactionOperations
         ()
+      })
+    })
+
+    def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] = synchronized({
+      transactionContext.deleteRecords(recordTag.runtimeClass, condition).map(deletedRecords => {
+        transactionOperations = DeleteOperation(recordTag.runtimeClass, condition, deletedRecords) :: transactionOperations
+
+        deletedRecords
       })
     })
 
