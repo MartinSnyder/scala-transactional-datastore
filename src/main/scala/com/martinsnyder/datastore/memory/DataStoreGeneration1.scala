@@ -1,9 +1,11 @@
-package com.martinsnyder.datastore
+package com.martinsnyder.datastore.memory
+
+import com.martinsnyder.datastore._
 
 import scala.reflect.ClassTag
 import scala.util.Try
 
-object DataStoreGeneration0 {
+object DataStoreGeneration1 {
   def getFieldValue(record: Record, fieldName: String) =
     record.getClass.getMethod(fieldName).invoke(record)
 
@@ -16,8 +18,8 @@ object DataStoreGeneration0 {
     records.filter(conditionToPredicate(condition))
 }
 
-class DataStoreGeneration0 extends DataStore {
-  import com.martinsnyder.datastore.DataStoreGeneration0._
+class DataStoreGeneration1 extends DataStore {
+  import DataStoreGeneration1._
 
   var allRecords: List[Record] = Nil
 
