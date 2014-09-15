@@ -18,14 +18,14 @@ abstract class AbstractDataStoreTest extends FunSpec {
     it("lets me insert a record") {
       val myRecord = MyRecord("testInsert")
 
-      val insertResult = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      val insertResult = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(insertResult.isSuccess)
     }
 
     it("lets me retrieve a stored record") {
       val myRecord = MyRecord("testRetrieve")
 
-      val insertResult = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      val insertResult = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(insertResult.isSuccess)
 
       val records = dataStore.withConnection(_.loadRecords[MyRecord](EqualsCondition("value", "testRetrieve")))
@@ -35,10 +35,10 @@ abstract class AbstractDataStoreTest extends FunSpec {
     it("disallows duplicate records") {
       val myRecord = MyRecord("testDuplicate")
 
-      val insertResult = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      val insertResult = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(insertResult.isSuccess)
 
-      dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord)))) match {
+      dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord)))) match {
         case Failure(ConstraintViolation(_)) => // Good
         case _ => fail("duplicate insert allowed")
       }
@@ -48,7 +48,7 @@ abstract class AbstractDataStoreTest extends FunSpec {
       val myRecord = MyRecord("testTransactionRollback")
 
       val transactionResult = dataStore.withConnection(_.inTransaction(connection => Try({
-        val insertResult = connection.insertRecords(Seq(myRecord))
+        val insertResult = connection.createRecords(Seq(myRecord))
         assert(insertResult.isSuccess)
 
         val records = connection.loadRecords[MyRecord](EqualsCondition("value", "testTransactionRollback"))
@@ -68,12 +68,12 @@ abstract class AbstractDataStoreTest extends FunSpec {
 
       dataStore.withConnection(connection => {
         val transaction1Result = connection.inTransaction(writeConnection1 => Try({
-          val insertResult1 = writeConnection1.insertRecords(Seq(myRecord))
+          val insertResult1 = writeConnection1.createRecords(Seq(myRecord))
           assert(insertResult1.isSuccess)
 
 
           val transaction2Result = connection.inTransaction(writeConnection2 => Try({
-            val insertResult2 = writeConnection2.insertRecords(Seq(myRecord))
+            val insertResult2 = writeConnection2.createRecords(Seq(myRecord))
             assert(insertResult2.isSuccess)
           }))
 
@@ -87,11 +87,11 @@ abstract class AbstractDataStoreTest extends FunSpec {
     it("lets me delete a stored record") {
       val myRecord = MyRecord("testDelete")
 
-      val insertResult = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      val insertResult = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(insertResult.isSuccess)
 
       // Should NOT be permitted to insert it again
-      val duplicateInsert1Result = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      val duplicateInsert1Result = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(duplicateInsert1Result.isFailure)
 
       val records = dataStore.withConnection(_.loadRecords[MyRecord](EqualsCondition("value", "testDelete")))
@@ -101,9 +101,8 @@ abstract class AbstractDataStoreTest extends FunSpec {
       assert(deleteResult == Success(Seq(MyRecord("testDelete"))))
 
       // Should be permitted to insert it again
-      val duplicateInsert2Result = dataStore.withConnection(_.inTransaction(_.insertRecords(Seq(myRecord))))
+      val duplicateInsert2Result = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(duplicateInsert2Result.isSuccess)
     }
-
   }
 }

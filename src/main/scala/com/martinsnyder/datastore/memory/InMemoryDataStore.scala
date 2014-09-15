@@ -23,13 +23,13 @@ object InMemoryDataStore {
 
   class UniqueConstraintEnforcer(constraint: UniqueConstraint, existingValues: Set[AnyRef] = Set()) extends ConstraintEnforcer {
     override def add(records: Seq[Record]): Try[ConstraintEnforcer] = Try({
-      var values = records.map(record => record.getClass.getMethod(constraint.fieldName).invoke(record))
-      var valuesSet = values.toSet
+      val values = records.map(record => record.getClass.getMethod(constraint.fieldName).invoke(record))
+      val valuesSet = values.toSet
 
       if (valuesSet.size != values.length)
         throw ConstraintViolation(constraint)
 
-      if (!existingValues.intersect(valuesSet).isEmpty)
+      if (existingValues.intersect(valuesSet).nonEmpty)
         throw ConstraintViolation(constraint)
 
       new UniqueConstraintEnforcer(constraint, existingValues ++ valuesSet)
@@ -133,7 +133,7 @@ class InMemoryDataStore(constraints: Seq[Constraint] = Nil) extends DataStore {
     override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) = synchronized(
       transactionContext.filter(recordTag.runtimeClass, condition))
 
-    override def insertRecords[T <: Record](records: Seq[Record]): Try[Unit] = synchronized({
+    override def createRecords[T <: Record](records: Seq[Record]): Try[Unit] = synchronized({
       transactionContext.addRecords(records).map(_ => {
         transactionOperations = InsertOperation(records) :: transactionOperations
         ()
@@ -152,5 +152,7 @@ class InMemoryDataStore(constraints: Seq[Constraint] = Nil) extends DataStore {
       f(new InMemoryWriteConnection(synchronized(transactionContext)))
 
     def commit: Try[Unit] = targetContext.applyOperations(transactionOperations.reverse)
+
+    override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] = ???
   }
 }

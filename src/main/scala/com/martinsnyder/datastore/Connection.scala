@@ -11,6 +11,7 @@ trait ReadConnection extends Connection {
 }
 
 trait WriteConnection extends ReadConnection {
-  def insertRecords[T <: Record](records: Seq[Record]): Try[Unit]
+  def createRecords[T <: Record](records: Seq[Record]): Try[Unit]
+  def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record]
   def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]]
 }
