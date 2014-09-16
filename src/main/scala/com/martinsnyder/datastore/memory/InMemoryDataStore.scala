@@ -36,7 +36,7 @@ object InMemoryDataStore {
     })
 
     override def remove(records: Seq[Record]): Try[ConstraintEnforcer] = Try({
-      var values = records.map(record => record.getClass.getMethod(constraint.fieldName).invoke(record)).toSet
+      val values = records.map(record => record.getClass.getMethod(constraint.fieldName).invoke(record)).toSet
       new UniqueConstraintEnforcer(constraint, existingValues -- values)
     })
   }

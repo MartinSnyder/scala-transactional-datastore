@@ -1,10 +1,11 @@
 package com.martinsnyder.datastore.memory
 
+import com.martinsnyder.datastore.DataStore.ConstraintViolation
 import com.martinsnyder.datastore._
 import scala.reflect.ClassTag
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
-object DataStoreGeneration2 {
+object DataStoreGeneration3 {
   def getFieldValue(record: Record, fieldName: String) =
     record.getClass.getMethod(fieldName).invoke(record)
 
@@ -51,43 +52,60 @@ object DataStoreGeneration2 {
     })
   }
 
-  class MutableRecordStore(private var recordStore: RecordStore = new RecordStore()) {
+  class MutableRecordStore(private var recordStore: RecordStore, private var constraintEnforcers: List[ConstraintEnforcer]) {
     def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) = synchronized(
       recordStore.retrieveRecords(condition)
     )
 
+    def applyConstraints(op: ConstraintEnforcer => Try[ConstraintEnforcer]): Try[List[ConstraintEnforcer]] = {
+      val wrappedEnforcers = constraintEnforcers.map(op)
+
+      val failures = wrappedEnforcers.filter(_.isFailure)
+      if (failures.nonEmpty) {
+        failures.head.asInstanceOf[Try[List[ConstraintEnforcer]]]
+      }
+      else {
+        Try(wrappedEnforcers.map(_.get))
+      }
+    }
+
     def createRecords[T <: Record](records: Seq[Record]): Try[Unit] = synchronized(
       for (
-        newStore <- recordStore.createRecords(records)
+        newStore <- recordStore.createRecords(records);
+        newEnforcers <- applyConstraints(_.addRecords(records))
       )
       yield {
         recordStore = newStore
-        ()
+        constraintEnforcers = newEnforcers
       }
     )
 
     def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] = synchronized(
       for (
-        (newStore, existingRecord) <- recordStore.updateRecord(condition, record)
+        (newStore, existingRecord) <- recordStore.updateRecord(condition, record);
+        newEnforcers <- applyConstraints(_.updateRecord(existingRecord, record))
       )
       yield {
         recordStore = newStore
+        constraintEnforcers = newEnforcers
         existingRecord
       }
     )
 
     def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] = synchronized(
       for (
-        (newStore, deletedRecords) <- recordStore.deleteRecords(condition)
+        (newStore, deletedRecords) <- recordStore.deleteRecords(condition);
+        newEnforcers <- applyConstraints(_.deleteRecords(deletedRecords))
       )
       yield {
         recordStore = newStore
+        constraintEnforcers = newEnforcers
         deletedRecords
       }
     )
 
     def copy =
-      new MutableRecordStore(recordStore)
+      new MutableRecordStore(recordStore, constraintEnforcers)
 
     def apply(operations: List[DataModification]): Try[Unit] = synchronized({
       val startingRecordStore = recordStore
@@ -119,12 +137,70 @@ object DataStoreGeneration2 {
   case class CreateRecords(records: Seq[Record]) extends DataModification
   case class UpdateRecord(oldRecord: Record, newRecord: Record) extends DataModification
   case class DeleteRecords(records: Seq[Record]) extends DataModification
+
+  object ConstraintEnforcer {
+    def apply(constraint: Constraint) = constraint match {
+      case uq: UniqueConstraint => new UniqueConstraintEnforcer(uq)
+      case iq: ImmutableConstraint => new ImmutableConstraintEnforcer(iq)
+    }
+  }
+
+  trait ConstraintEnforcer {
+    def addRecords(records: Seq[Record]): Try[ConstraintEnforcer]
+    def updateRecord(oldRecord: Record, newRecord: Record): Try[ConstraintEnforcer]
+    def deleteRecords(records: Seq[Record]): Try[ConstraintEnforcer]
+  }
+  class UniqueConstraintEnforcer(val constraint: UniqueConstraint, uniqueValues: Set[AnyRef] = Set()) extends ConstraintEnforcer {
+    override def addRecords(records: Seq[Record]): Try[ConstraintEnforcer] = Try({
+      val values = records.map(getFieldValue(_, constraint.fieldName)).toSet
+
+      // Some of our inserted records might have duplicate values
+      if (values.size < records.length)
+        throw new ConstraintViolation(constraint)
+
+      if (uniqueValues.intersect(values).nonEmpty)
+        throw new ConstraintViolation(constraint)
+
+      new UniqueConstraintEnforcer(constraint, uniqueValues ++ values)
+    })
+
+    override def updateRecord(oldRecord: Record, newRecord: Record): Try[ConstraintEnforcer] = Try({
+      val oldValue = getFieldValue(oldRecord, constraint.fieldName)
+      val newValue = getFieldValue(newRecord, constraint.fieldName)
+
+      if (oldValue == newValue) {
+        this
+      }
+      else {
+        if (uniqueValues.contains(newValue))
+          throw new ConstraintViolation(constraint)
+
+        new UniqueConstraintEnforcer(constraint, (uniqueValues -- Set(oldValue)) ++ Set(newValue))
+      }
+    })
+
+    override def deleteRecords(records: Seq[Record]): Try[ConstraintEnforcer] = Try({
+      val values = records.map(getFieldValue(_, constraint.fieldName)).toSet
+
+      new UniqueConstraintEnforcer(constraint, uniqueValues -- values)
+    })
+  }
+  class ImmutableConstraintEnforcer(val constraint: ImmutableConstraint) extends ConstraintEnforcer {
+    override def addRecords(records: Seq[Record]): Try[ConstraintEnforcer] =
+      Success(this)
+
+    override def updateRecord(oldRecord: Record, newRecord: Record): Try[ConstraintEnforcer] =
+      Failure(new ConstraintViolation(constraint))
+
+    override def deleteRecords(records: Seq[Record]): Try[ConstraintEnforcer] =
+      Failure(new ConstraintViolation(constraint))
+  }
 }
 
-class DataStoreGeneration2 extends DataStore {
-  import DataStoreGeneration2._
+class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore {
+  import DataStoreGeneration3._
 
-  private val recordStore = new MutableRecordStore()
+  private val recordStore = new MutableRecordStore(new RecordStore, constraints.map(ConstraintEnforcer.apply))
 
   class LocalReadConnection(baseStore: MutableRecordStore) extends ReadConnection {
     override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
@@ -133,10 +209,10 @@ class DataStoreGeneration2 extends DataStore {
     override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] = {
       val writeConnection = new LocalWriteConnection(recordStore.copy)
       for (
-        result <- f(writeConnection)
+        result <- f(writeConnection);
+        _ <- recordStore.apply(writeConnection.modifications)
       )
       yield {
-        recordStore.apply(writeConnection.modifications)
         result
       }
     }
@@ -154,7 +230,7 @@ class DataStoreGeneration2 extends DataStore {
       transactionStore
         .createRecords(records)
         .map(_ =>
-          modifications = CreateRecords(records) :: modifications
+        modifications = CreateRecords(records) :: modifications
         )
 
     override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] =

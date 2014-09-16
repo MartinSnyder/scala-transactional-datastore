@@ -1,6 +1,6 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory.{DataStoreGeneration2, DataStoreGeneration1}
+import com.martinsnyder.datastore.memory.{DataStoreGeneration3, DataStoreGeneration2, DataStoreGeneration1}
 import com.martinsnyder.datastore.{EqualsCondition, Record, DataStore}
 import org.scalatest.FunSpec
 
@@ -67,4 +67,8 @@ class Generation1BasicCRDTest extends AbstractBasicCRDTest {
 
 class Generation2BasicCRDTest extends AbstractBasicCRDTest {
   val dataStore = new DataStoreGeneration2
+}
+
+class Generation3BasicCRDTest extends AbstractBasicCRDTest {
+  val dataStore = new DataStoreGeneration3(Nil)
 }
