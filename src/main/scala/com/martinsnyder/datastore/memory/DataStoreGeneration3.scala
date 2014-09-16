@@ -229,7 +229,7 @@ class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore 
   }
 
   class LocalReadConnection(baseStore: MutableRecordStore) extends ReadConnection {
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
       recordStore.retrieveRecords(condition)
 
     override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] =
@@ -245,7 +245,7 @@ class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore 
     var modifications: List[DataModification] = Nil
 
     // Basic CRUD operations
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
       transactionStore
         .retrieveRecords(condition)
 

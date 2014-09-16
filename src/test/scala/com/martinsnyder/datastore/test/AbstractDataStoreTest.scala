@@ -29,7 +29,7 @@ abstract class AbstractDataStoreTest extends FunSpec {
       val insertResult = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(insertResult.isSuccess)
 
-      val records = dataStore.withConnection(_.loadRecords[MyRecord](EqualsCondition("value", "testRetrieve")))
+      val records = dataStore.withConnection(_.retrieveRecords[MyRecord](EqualsCondition("value", "testRetrieve")))
       assert(records == Success(Seq(myRecord)))
     }
 
@@ -52,7 +52,7 @@ abstract class AbstractDataStoreTest extends FunSpec {
         val insertResult = connection.createRecords(Seq(myRecord))
         assert(insertResult.isSuccess)
 
-        val records = connection.loadRecords[MyRecord](EqualsCondition("value", "testTransactionRollback"))
+        val records = connection.retrieveRecords[MyRecord](EqualsCondition("value", "testTransactionRollback"))
         assert(records == Success(Seq(myRecord)))
 
         throw new Exception("whoops!")
@@ -60,7 +60,7 @@ abstract class AbstractDataStoreTest extends FunSpec {
 
       assert(transactionResult.isFailure)
 
-      val records = dataStore.withConnection(_.loadRecords[MyRecord](EqualsCondition("value", "testTransactionRollback")))
+      val records = dataStore.withConnection(_.retrieveRecords[MyRecord](EqualsCondition("value", "testTransactionRollback")))
       assert(records == Success(Seq()))
     }
 
@@ -95,7 +95,7 @@ abstract class AbstractDataStoreTest extends FunSpec {
       val duplicateInsert1Result = dataStore.withConnection(_.inTransaction(_.createRecords(Seq(myRecord))))
       assert(duplicateInsert1Result.isFailure)
 
-      val records = dataStore.withConnection(_.loadRecords[MyRecord](EqualsCondition("value", "testDelete")))
+      val records = dataStore.withConnection(_.retrieveRecords[MyRecord](EqualsCondition("value", "testDelete")))
       assert(records == Success(Seq(myRecord)))
 
       val deleteResult = dataStore.withConnection(_.inTransaction(_.deleteRecords[MyRecord](EqualsCondition("value", "testDelete"))))

@@ -38,11 +38,11 @@ abstract class AbstractBasicUpdateTest extends FunSpec {
       assert(updated == Success(InsertSampleRecord))
 
       // Attempt to query for the original record.  It should no longer be available
-      val retrievedOriginal = dataStore.withConnection(_.loadRecords[TestRecord](SampleCondition))
+      val retrievedOriginal = dataStore.withConnection(_.retrieveRecords[TestRecord](SampleCondition))
       assert(retrievedOriginal == Success(Seq()))
 
       // Query for the updated values.  They should exist in the store
-      val retrievedUpdate = dataStore.withConnection(_.loadRecords[TestRecord](EqualsCondition("value", "First Update")))
+      val retrievedUpdate = dataStore.withConnection(_.retrieveRecords[TestRecord](EqualsCondition("value", "First Update")))
       assert(retrievedUpdate == Success(Seq(UpdateSampleRecord)))
     }
 

@@ -129,7 +129,7 @@ class OlderExampleDataStore(constraints: Seq[Constraint] = Nil) extends DataStor
   override def withConnection[T](f: (ReadConnection) => T): T = f(new InMemoryReadConnection)
 
   class InMemoryReadConnection extends ReadConnection {
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
       constrainedRecords.filter(recordTag.runtimeClass, condition)
 
     override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] = {
@@ -146,7 +146,7 @@ class OlderExampleDataStore(constraints: Seq[Constraint] = Nil) extends DataStor
     val transactionContext = targetContext.copy
     var transactionOperations = List[TransactionOperation]()
 
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) = synchronized(
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) = synchronized(
       transactionContext.filter(recordTag.runtimeClass, condition))
 
     override def createRecords[T <: Record](records: Seq[Record]): Try[Unit] = synchronized({

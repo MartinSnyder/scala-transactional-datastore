@@ -127,7 +127,7 @@ class DataStoreGeneration2 extends DataStore {
   private val recordStore = new MutableRecordStore()
 
   class LocalReadConnection(baseStore: MutableRecordStore) extends ReadConnection {
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
       recordStore.retrieveRecords(condition)
 
     override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] = {
@@ -146,7 +146,7 @@ class DataStoreGeneration2 extends DataStore {
     val transactionStore = baseStore.copy
     var modifications: List[DataModification] = Nil
 
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]) =
       transactionStore
         .retrieveRecords(condition)
 

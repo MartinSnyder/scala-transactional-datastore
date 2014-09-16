@@ -30,7 +30,7 @@ class DataStoreGeneration1 extends DataStore {
   var allRecords: List[Record] = Nil
 
   class LocalReadConnection extends ReadConnection {
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] = {
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] = {
       assert(recordTag.runtimeClass != classOf[Nothing], "Generic Type must be specified to loadRecords")
 
       Try(filter(allRecords.filter(_.getClass == recordTag.runtimeClass), condition))

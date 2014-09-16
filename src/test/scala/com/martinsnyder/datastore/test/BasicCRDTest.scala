@@ -45,7 +45,7 @@ abstract class AbstractBasicCRDTest extends FunSpec {
 
     it("can retrieve records") {
       // Make sure that we can read the record we just inserted
-      val retrieved = dataStore.withConnection(_.loadRecords[TestRecord](SampleCondition))
+      val retrieved = dataStore.withConnection(_.retrieveRecords[TestRecord](SampleCondition))
       assert(retrieved == Success(Seq(FirstSampleRecord)))
     }
 
@@ -55,7 +55,7 @@ abstract class AbstractBasicCRDTest extends FunSpec {
       assert(deleted == Success(Seq(FirstSampleRecord)))
 
       // Verify that we can no longer query for the record
-      val retrieved = dataStore.withConnection(_.loadRecords[TestRecord](SampleCondition))
+      val retrieved = dataStore.withConnection(_.retrieveRecords[TestRecord](SampleCondition))
       assert(retrieved == Success(Seq()))
     }
   }
