@@ -1,6 +1,6 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory.{DataStoreGeneration3, InMemoryDataStore}
+import com.martinsnyder.datastore.memory.{DataStoreGeneration3, OlderExampleDataStore}
 import org.scalatest.FunSpec
 import com.martinsnyder.datastore.{UniqueConstraint, EqualsCondition, DataStore, Record}
 import scala.util.{Try, Failure, Success}
@@ -108,10 +108,10 @@ abstract class AbstractDataStoreTest extends FunSpec {
   }
 }
 
-class InMemoryDataStoreTest extends AbstractDataStoreTest {
+class OlderExampleDataStoreTest extends AbstractDataStoreTest {
   import AbstractDataStoreTest._
 
-  override val dataStore = new InMemoryDataStore(Seq(
+  override val dataStore = new OlderExampleDataStore(Seq(
     UniqueConstraint(MyRecord.getClass.getName, "value")
   ))
 }

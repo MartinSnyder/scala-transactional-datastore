@@ -5,10 +5,10 @@ import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
 
-object InMemoryDataStore {
+object OlderExampleDataStore {
   sealed trait TransactionOperation
   case class InsertOperation(records: Seq[Record]) extends TransactionOperation
-  case class DeleteOperation(recordClass: Class[_], condition: Condition, records: Seq[Record]) extends TransactionOperation
+  class DeleteOperation(val recordClass: Class[_], val condition: Condition, val records: Seq[Record]) extends TransactionOperation
 
   sealed trait ConstraintEnforcer {
     def add(records: Seq[Record]): Try[ConstraintEnforcer]
@@ -105,7 +105,8 @@ object InMemoryDataStore {
     def applyOperations(operations: Seq[TransactionOperation]): Try[Unit] = synchronized({
       val triedOperations = operations.map({
         case InsertOperation(records) => addRecords(records)
-        case DeleteOperation(recordClass, condition, expectedRecords) => deleteRecords(recordClass, condition)
+        case deleteOp: DeleteOperation =>
+          deleteRecords(deleteOp.recordClass, deleteOp.condition)
       })
 
       triedOperations.find(_.isFailure) match {
@@ -120,8 +121,8 @@ object InMemoryDataStore {
   }
 }
 
-class InMemoryDataStore(constraints: Seq[Constraint] = Nil) extends DataStore {
-  import InMemoryDataStore._
+class OlderExampleDataStore(constraints: Seq[Constraint] = Nil) extends DataStore {
+  import OlderExampleDataStore._
 
   val constrainedRecords = new ConstrainedRecords(Nil, constraints.map(ConstraintEnforcer(_)).toList)
 
@@ -157,7 +158,7 @@ class InMemoryDataStore(constraints: Seq[Constraint] = Nil) extends DataStore {
 
     def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] = synchronized({
       transactionContext.deleteRecords(recordTag.runtimeClass, condition).map(deletedRecords => {
-        transactionOperations = DeleteOperation(recordTag.runtimeClass, condition, deletedRecords) :: transactionOperations
+        transactionOperations = new DeleteOperation(recordTag.runtimeClass, condition, deletedRecords) :: transactionOperations
 
         deletedRecords
       })
@@ -168,6 +169,8 @@ class InMemoryDataStore(constraints: Seq[Constraint] = Nil) extends DataStore {
 
     def commit: Try[Unit] = targetContext.applyOperations(transactionOperations.reverse)
 
-    override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] = ???
+    override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] = {
+      throw new NotImplementedError
+    }
   }
 }
