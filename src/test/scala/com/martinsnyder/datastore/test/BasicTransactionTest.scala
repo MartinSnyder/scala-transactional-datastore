@@ -32,32 +32,32 @@ abstract class AbstractBasicTransactionTest extends FunSpec {
           txn1.createRecords(Seq(FirstSampleRecord))
 
           // Verify that this is the only record available
-          assert(txn1.loadRecords(AllCondition) == Success(Seq(FirstSampleRecord)))
+          assert(txn1.loadRecords[TestRecord](AllCondition) == Success(Seq(FirstSampleRecord)))
 
           readConnection.inTransaction(txn2 => {
             // Verify there are no matching records
-            assert(txn2.loadRecords(AllCondition) == Success(Seq()))
+            assert(txn2.loadRecords[TestRecord](AllCondition) == Success(Seq()))
 
             // Insert a record in the outer transaction
             txn2.createRecords(Seq(SecondSampleRecord))
 
             // Verify that this is the only record available
-            assert(txn2.loadRecords(AllCondition) == Success(Seq(SecondSampleRecord)))
+            assert(txn2.loadRecords[TestRecord](AllCondition) == Success(Seq(SecondSampleRecord)))
 
-            Success()
+            Success(())
           })
 
           // The second transaction has committed, but we haven't.  We should still only see one record
-          assert(txn1.loadRecords(AllCondition) == Success(Seq(FirstSampleRecord)))
+          assert(txn1.loadRecords[TestRecord](AllCondition) == Success(Seq(FirstSampleRecord)))
 
-          Success()
+          Success(())
         })
       })
 
       // Both transactions have committed, both records should be visible here.  There is no guarantee
       // about the order, but we have fortunately chosen the correct order for our comparison :)
       dataStore.withConnection(readConnection => {
-        assert(readConnection.loadRecords(AllCondition) == Success(Seq(SecondSampleRecord, FirstSampleRecord)))
+        assert(readConnection.loadRecords[TestRecord](AllCondition) == Success(Seq(SecondSampleRecord, FirstSampleRecord)))
       })
     }
   }

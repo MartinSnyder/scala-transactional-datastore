@@ -1,7 +1,7 @@
 package com.martinsnyder.datastore.memory
 
 import com.martinsnyder.datastore._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
 
@@ -17,7 +17,8 @@ object InMemoryDataStore {
 
   object ConstraintEnforcer {
     def apply(constraint: Constraint) = constraint match {
-      case uq: UniqueConstraint => new UniqueConstraintEnforcer(uq)
+      case uc: UniqueConstraint => new UniqueConstraintEnforcer(uc)
+      case ic: ImmutableConstraint => new ImmutableConstraintEnforced(ic)
     }
   }
 
@@ -41,14 +42,28 @@ object InMemoryDataStore {
     })
   }
 
+  class ImmutableConstraintEnforced(constraint: ImmutableConstraint) extends ConstraintEnforcer {
+    override def add(records: Seq[Record]): Try[ConstraintEnforcer] =
+      Success(this)
+
+    override def remove(records: Seq[Record]): Try[ConstraintEnforcer] =
+      Failure(ConstraintViolation(constraint))
+  }
+
   class ConstrainedRecords(private var storedRecords: List[Record],
                            private var constraintEnforcers: List[ConstraintEnforcer]) {
     def filter(recordClass: Class[_], condition: Condition) = synchronized(Try(
       storedRecords
         .filter(record => record.getClass == recordClass)
         .filter(record => condition match {
+        case AllCondition =>
+          true
+
         case EqualsCondition(fieldName, value) =>
           record.getClass.getMethod(fieldName).invoke(record) == value
+
+        case ExactMatchCondition(matchRecords) =>
+          matchRecords.contains(record)
       }))
     )
 

@@ -10,8 +10,14 @@ object DataStoreGeneration1 {
     record.getClass.getMethod(fieldName).invoke(record)
 
   def conditionToPredicate(condition: Condition) = condition match {
+    case AllCondition =>
+      (record: Record) => true
+
     case EqualsCondition(fieldName, value) =>
       (record: Record) => getFieldValue(record, fieldName) == value
+
+    case ExactMatchCondition(matchRecords) =>
+      (record: Record) => matchRecords.contains(record)
   }
 
   def filter(records: List[Record], condition: Condition) =
@@ -24,8 +30,11 @@ class DataStoreGeneration1 extends DataStore {
   var allRecords: List[Record] = Nil
 
   class LocalReadConnection extends ReadConnection {
-    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
-      Try(filter(allRecords.filter(_.isInstanceOf[T]), condition))
+    override def loadRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] = {
+      assert(recordTag.runtimeClass != classOf[Nothing], "Generic Type must be specified to loadRecords")
+
+      Try(filter(allRecords.filter(_.getClass == recordTag.runtimeClass), condition))
+    }
 
     override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] =
       f(new LocalWriteConnection)
@@ -37,7 +46,7 @@ class DataStoreGeneration1 extends DataStore {
     })
 
     override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] = Try({
-      filter(allRecords.filter(_.isInstanceOf[T]), condition) match {
+      filter(allRecords.filter(_.getClass == record.getClass), condition) match {
         case Seq() =>
           throw new Exception("No records found")
 

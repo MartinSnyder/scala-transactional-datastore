@@ -30,10 +30,10 @@ object DataStoreGeneration3 {
     })
 
     def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
-      Try(filter(allRecords.filter(_.isInstanceOf[T]), condition))
+      Try(filter(allRecords.filter(_.getClass == recordTag.runtimeClass), condition))
 
     def updateRecord[T <: Record](condition: Condition, record: Record): Try[(RecordStore, Record)] = Try({
-      filter(allRecords.filter(_.isInstanceOf[T]), condition) match {
+      filter(allRecords.filter(_.getClass == record.getClass), condition) match {
         case Seq() =>
           throw new Exception("No records found")
 
@@ -123,7 +123,7 @@ object DataStoreGeneration3 {
 
       val failures = results.filter(_.isFailure)
       if (failures.isEmpty) {
-        Success()
+        Success(())
       }
       else {
         // Restore our starting record store at the beginning of this operation
@@ -207,10 +207,10 @@ class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore 
       recordStore.retrieveRecords(condition)
 
     override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] = {
-      val writeConnection = new LocalWriteConnection(recordStore.copy)
+      val writeConnection = new LocalWriteConnection(recordStore)
       for (
         result <- f(writeConnection);
-        _ <- recordStore.apply(writeConnection.modifications)
+        _ <- writeConnection.commit()
       )
       yield {
         result
@@ -249,15 +249,8 @@ class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore 
           deletedRecords
         })
 
-    def commit(): Unit = {
-      modifications.reverse.foreach({
-        case CreateRecords(records) =>
-
-        case UpdateRecord(oldRecord, newRecord) =>
-
-        case DeleteRecords(records) =>
-
-      })
+    def commit(): Try[Unit] = {
+      baseStore.apply(modifications)
     }
   }
 
