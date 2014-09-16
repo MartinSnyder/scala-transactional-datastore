@@ -6,12 +6,12 @@ import com.martinsnyder.datastore.{UniqueConstraint, EqualsCondition, DataStore,
 import scala.util.{Try, Failure, Success}
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
 
-object AbstractDataStoreTest {
+object ConstraintAndTransactionTest {
   case class MyRecord(value: String) extends Record
 }
 
-abstract class AbstractDataStoreTest extends FunSpec {
-  import AbstractDataStoreTest._
+abstract class ConstraintAndTransactionTest extends FunSpec {
+  import ConstraintAndTransactionTest._
 
   val dataStore: DataStore
 
@@ -108,19 +108,18 @@ abstract class AbstractDataStoreTest extends FunSpec {
   }
 }
 
-class OlderExampleDataStoreTest extends AbstractDataStoreTest {
-  import AbstractDataStoreTest._
+class OlderExampleConstraintAndTransactionTest extends ConstraintAndTransactionTest {
+  import ConstraintAndTransactionTest._
 
   override val dataStore = new OlderExampleDataStore(Seq(
     UniqueConstraint(MyRecord.getClass.getName, "value")
   ))
 }
 
-class Generation3DataStoreTest extends AbstractDataStoreTest {
-  import AbstractDataStoreTest._
+class Generation3ConstraintAndTransactionTest extends ConstraintAndTransactionTest {
+  import ConstraintAndTransactionTest._
 
   override val dataStore = new DataStoreGeneration3(List(
     UniqueConstraint(MyRecord.getClass.getName, "value")
   ))
 }
-

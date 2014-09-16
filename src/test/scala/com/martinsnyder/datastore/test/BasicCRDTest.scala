@@ -1,7 +1,7 @@
 package com.martinsnyder.datastore.test
 
 import com.martinsnyder.datastore.memory.{DataStoreGeneration3, DataStoreGeneration2, DataStoreGeneration1}
-import com.martinsnyder.datastore.{EqualsCondition, Record, DataStore}
+import com.martinsnyder.datastore.{AllCondition, EqualsCondition, Record, DataStore}
 import org.scalatest.FunSpec
 
 import scala.util.Success
@@ -44,19 +44,27 @@ abstract class AbstractBasicCRDTest extends FunSpec {
     }
 
     it("can retrieve records") {
+      // Read all records
+      val retrievedAll = dataStore.withConnection(_.retrieveRecords[TestRecord](AllCondition))
+      assert(retrievedAll == Success(SampleRecords))
+
       // Make sure that we can read the record we just inserted
-      val retrieved = dataStore.withConnection(_.retrieveRecords[TestRecord](SampleCondition))
-      assert(retrieved == Success(Seq(FirstSampleRecord)))
+      val retrievedJustFirst = dataStore.withConnection(_.retrieveRecords[TestRecord](SampleCondition))
+      assert(retrievedJustFirst == Success(Seq(FirstSampleRecord)))
     }
 
     it("can delete records") {
       // Delete the record we inserted.  Return value should include the record
-      val deleted = dataStore.withConnection(_.inTransaction(_.deleteRecords(SampleCondition)))
+      val deleted = dataStore.withConnection(_.inTransaction(_.deleteRecords[TestRecord](SampleCondition)))
       assert(deleted == Success(Seq(FirstSampleRecord)))
 
       // Verify that we can no longer query for the record
       val retrieved = dataStore.withConnection(_.retrieveRecords[TestRecord](SampleCondition))
       assert(retrieved == Success(Seq()))
+
+      // Verify that only the second record is available in the store
+      val retrievedJustSecond = dataStore.withConnection(_.retrieveRecords[TestRecord](AllCondition))
+      assert(retrievedJustSecond == Success(Seq(SecondSampleRecord)))
     }
   }
 }

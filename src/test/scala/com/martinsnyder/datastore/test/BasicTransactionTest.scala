@@ -26,7 +26,7 @@ abstract class AbstractBasicTransactionTest extends FunSpec {
       dataStore.withConnection(readConnection => {
         readConnection.inTransaction(txn1 => {
           // Verify there are no matching records
-          assert(txn1.retrieveRecords(AllCondition) == Success(Seq()))
+          assert(txn1.retrieveRecords[TestRecord](AllCondition) == Success(Seq()))
 
           // Insert a record in the outer transaction
           txn1.createRecords(Seq(FirstSampleRecord))
