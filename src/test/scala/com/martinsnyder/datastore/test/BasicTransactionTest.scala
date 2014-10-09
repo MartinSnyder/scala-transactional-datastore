@@ -1,6 +1,6 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory.{PhaseDataStore, DataStoreGeneration3, DataStoreGeneration2}
+import com.martinsnyder.datastore.memory.{ExampleDataStore, PhaseDataStore, DataStoreGeneration3, DataStoreGeneration2}
 import com.martinsnyder.datastore.{AllCondition, DataStore, Record}
 import org.scalatest.FunSpec
 
@@ -73,4 +73,8 @@ class Generation3BasicTransactionTest extends AbstractBasicTransactionTest {
 
 class PhaseBasicTransactionTest extends AbstractBasicTransactionTest {
   val dataStore = new PhaseDataStore(Nil)
+}
+
+class ExampleDataStoreBasicTransactionTest extends AbstractBasicTransactionTest {
+  val dataStore = new ExampleDataStore(Nil)
 }
