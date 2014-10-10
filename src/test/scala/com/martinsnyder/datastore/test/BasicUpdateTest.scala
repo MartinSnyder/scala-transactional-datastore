@@ -74,3 +74,7 @@ class PhaseBasicUpdateTest extends AbstractBasicUpdateTest {
 class ExampleDataStoreBasicUpdateTest extends AbstractBasicUpdateTest {
   val dataStore = new ExampleDataStore(Nil)
 }
+
+class PhillyLambdaDataStoreBasicUpdateTest extends AbstractBasicUpdateTest {
+  val dataStore = new PhillyLambdaDataStore(Nil)
+}

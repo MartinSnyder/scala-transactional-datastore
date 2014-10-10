@@ -88,3 +88,7 @@ class PhaseBasicCRDTest extends AbstractBasicCRDTest {
 class ExampleDataStoreBasicCRDTest extends AbstractBasicCRDTest {
   val dataStore = new ExampleDataStore(Nil)
 }
+
+class PhillyLambdaDataStoreBasicCRDTest extends AbstractBasicCRDTest {
+  val dataStore = new PhillyLambdaDataStore(Nil)
+}
