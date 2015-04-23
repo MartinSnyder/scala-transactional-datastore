@@ -35,7 +35,7 @@ object PhillyLambdaDataStore {
     def partition(condition: Condition) =
       records.partition(conditionToPredicate(condition))
   }
-  implicit def doWrapList(records: List[Record]) = new ListWrapper(records)
+  implicit def doWrapList(records: List[Record]): ListWrapper = new ListWrapper(records)
 
   class RecordStore(storedRecords: List[Record]) {
     /**
