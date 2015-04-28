@@ -73,11 +73,11 @@ object PhillyLambdaDataStore {
     /**
      * Remove records from the store that match condition.  Returns the records that were removed.
      */
-    def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[(RecordStore, Seq[Record])] = Try({
-      val (recordsToDelete, recordsToKeep) = storedRecords.partition(condition)
-
-      (new RecordStore(recordsToKeep), recordsToDelete)
-    })
+    def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[(RecordStore, Seq[Record])] =
+      for (
+        (applicableRecords, otherRecords) <- Try(storedRecords.partition(_.getClass == recordTag.runtimeClass));
+        (recordsToDelete, recordsToKeep) <- Try(applicableRecords.partition(condition))
+      ) yield (new RecordStore(otherRecords ::: recordsToKeep), recordsToDelete)
 
     def applyOperations(transactionLog: List[Operation]): Try[RecordStore] = {
       def privateCombine(maybeStore: Try[RecordStore], op: Operation): Try[RecordStore] = {
@@ -91,7 +91,7 @@ object PhillyLambdaDataStore {
                 .map(_._1)
 
             case DeleteOp(deletedRecords) =>
-              store.deleteRecords(ExactMatchCondition(deletedRecords))
+              store.deleteRecords(ExactMatchCondition(deletedRecords))(ClassTag(deletedRecords.head.getClass))
                 .map(_._1)
           }
         })

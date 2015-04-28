@@ -1,6 +1,6 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory.{ExampleDataStore, PhaseDataStore, DataStoreGeneration3 }
+import com.martinsnyder.datastore.memory._
 import org.scalatest.FunSpec
 import com.martinsnyder.datastore.{UniqueConstraint, EqualsCondition, DataStore, Record}
 import scala.util.{Try, Failure, Success}
@@ -129,5 +129,13 @@ class ExampleDataStoreConstraintAndTransactionTest extends ConstraintAndTransact
 
   override val dataStore = new ExampleDataStore(List(
     UniqueConstraint(MyRecord.getClass.getName, "value")
+  ))
+}
+
+class PhillyLambdaDataStoreConstraintAndTransactionTest extends ConstraintAndTransactionTest {
+  import ConstraintAndTransactionTest._
+
+  override val dataStore = new PhillyLambdaDataStore(List(
+    UniqueConstraint(classOf[MyRecord].getName, "value")
   ))
 }
