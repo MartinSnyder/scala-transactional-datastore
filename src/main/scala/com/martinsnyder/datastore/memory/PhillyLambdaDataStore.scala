@@ -1,5 +1,6 @@
 package com.martinsnyder.datastore.memory
 
+import com.martinsnyder.datastore.DataStore.ConstraintViolation
 import com.martinsnyder.datastore._
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -7,7 +8,9 @@ import scala.language.implicitConversions
 
 // Live coded for Philly Lambda on 09-Oct-2014
 // http://www.meetup.com/Philly-Lambda/events/210473142/
-// NOTE: This implementation does not include constraints
+// Updated for Philly Lambda on 28-Apr-2015
+// http://www.meetup.com/Philly-Lambda/events/212631952/
+// NOTE: This implementation has only a partial constraints implementation
 object PhillyLambdaDataStore {
   def getFieldValue(record: Record, fieldName: String) =
     record.getClass.getMethod(fieldName).invoke(record)
@@ -37,13 +40,24 @@ object PhillyLambdaDataStore {
   }
   implicit def doWrapList(records: List[Record]): ListWrapper = new ListWrapper(records)
 
-  class RecordStore(storedRecords: List[Record]) {
+  class RecordStore(storedRecords: List[Record], currentEnforcers: Seq[ConstraintEnforcer]) {
+    def applyConstraints(action: ConstraintEnforcer => Try[ConstraintEnforcer]): Try[Seq[ConstraintEnforcer]] = {
+      def doFold(maybeWip: Try[List[ConstraintEnforcer]], next: ConstraintEnforcer): Try[List[ConstraintEnforcer]] =
+        for (
+          wip <- maybeWip;
+          updatedNext <- action(next)
+        ) yield updatedNext :: wip
+
+      currentEnforcers.foldLeft(Try(Nil: List[ConstraintEnforcer]))(doFold)
+    }
+
     /**
      * Add records to the store
      */
-    def createRecords[T <: Record](records: Seq[Record]): Try[RecordStore] = Try({
-      new RecordStore(storedRecords ::: records.toList)
-    })
+    def createRecords[T <: Record](records: Seq[Record]): Try[RecordStore] =
+      for (
+        newEnforcers <- applyConstraints(_.create(records))
+      ) yield new RecordStore(storedRecords ::: records.toList, newEnforcers)
 
     /**
      * Load records from the store.
@@ -57,18 +71,21 @@ object PhillyLambdaDataStore {
      * Update a single existing record.  If condition does not resolve to exactly one record, then
      * an exception will be thrown.  Returns previous copy of the record
      */
-    def updateRecord[T <: Record](condition: Condition, record: Record): Try[(RecordStore, Record)] = Try({
-      storedRecords.filter(condition) match {
-        case Nil =>
-          throw new Exception("Could not find record)")
+    def updateRecord[T <: Record](condition: Condition, record: Record): Try[(RecordStore, Record)] =
+      for (
+        (updatedRecords, oldRecord) <- Try(
+          storedRecords.filter(condition) match {
+            case Nil =>
+              throw new Exception("Could not find record)")
 
-        case Seq(recordToUpdate) =>
-          (new RecordStore(record :: storedRecords.filter(_ != recordToUpdate)), recordToUpdate)
+            case Seq(recordToUpdate) =>
+              (record :: storedRecords.filter(_ != recordToUpdate), recordToUpdate)
 
-        case biggerSequence =>
-          throw new Exception(s"Too many records ${biggerSequence.length}")
-      }
-    })
+            case biggerSequence =>
+              throw new Exception(s"Too many records ${biggerSequence.length}")
+          });
+          newEnforcers <- applyConstraints(_.update(oldRecord, record))
+        ) yield (new RecordStore(updatedRecords, newEnforcers), oldRecord)
 
     /**
      * Remove records from the store that match condition.  Returns the records that were removed.
@@ -76,8 +93,9 @@ object PhillyLambdaDataStore {
     def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[(RecordStore, Seq[Record])] =
       for (
         (applicableRecords, otherRecords) <- Try(storedRecords.partition(_.getClass == recordTag.runtimeClass));
-        (recordsToDelete, recordsToKeep) <- Try(applicableRecords.partition(condition))
-      ) yield (new RecordStore(otherRecords ::: recordsToKeep), recordsToDelete)
+        (recordsToDelete, recordsToKeep) <- Try(applicableRecords.partition(condition));
+        newEnforcers <- applyConstraints(_.delete(recordsToDelete))
+      ) yield (new RecordStore(otherRecords ::: recordsToKeep, newEnforcers), recordsToDelete)
 
     def applyOperations(transactionLog: List[Operation]): Try[RecordStore] = {
       def privateCombine(maybeStore: Try[RecordStore], op: Operation): Try[RecordStore] = {
@@ -154,12 +172,47 @@ object PhillyLambdaDataStore {
   case class CreateOp(records: Seq[Record]) extends Operation
   case class UpdateOp(oldRecord: Record, newRecord: Record) extends Operation
   case class DeleteOp(records: Seq[Record]) extends Operation
+
+  object ConstraintEnforcer {
+    private val stuff = 5
+    def apply(constraint: Constraint): ConstraintEnforcer = constraint match {
+      case uq: UniqueConstraint => new UniqueConstraintEnforcer(uq, Set())
+      case iq: ImmutableConstraint => new ImmutableConstraintEnforcer
+    }
+  }
+
+  trait ConstraintEnforcer {
+    def create(records: Seq[Record]): Try[ConstraintEnforcer]
+    def update(oldRecord: Record, newRecord: Record): Try[ConstraintEnforcer]
+    def delete(records: Seq[Record]): Try[ConstraintEnforcer]
+  }
+
+  class UniqueConstraintEnforcer(constraint: UniqueConstraint, uniqueValues: Set[AnyRef]) extends ConstraintEnforcer {
+    override def create(records: Seq[Record]): Try[ConstraintEnforcer] = Try({
+      val valuesToAdd = records.map(getFieldValue(_, constraint.fieldName)).toSet
+      val updatedUniques = uniqueValues ++ valuesToAdd
+
+      if (updatedUniques.size < uniqueValues.size + records.size)
+        throw new ConstraintViolation(constraint)
+
+      new UniqueConstraintEnforcer(constraint, updatedUniques)
+    })
+
+    override def update(oldRecord: Record, newRecord: Record): Try[ConstraintEnforcer] = ???
+    override def delete(records: Seq[Record]): Try[ConstraintEnforcer] = ???
+  }
+
+  class ImmutableConstraintEnforcer extends ConstraintEnforcer {
+    override def create(records: Seq[Record]): Try[ConstraintEnforcer] = ???
+    override def update(oldRecord: Record, newRecord: Record): Try[ConstraintEnforcer] = ???
+    override def delete(records: Seq[Record]): Try[ConstraintEnforcer] = ???
+  }
 }
 
-class PhillyLambdaDataStore(ignored: Any) extends DataStore {
+class PhillyLambdaDataStore(constraints: Seq[Constraint]) extends DataStore {
   import PhillyLambdaDataStore._
 
-  val recordStore = new MutableRecordStore(new RecordStore(Nil))
+  val recordStore = new MutableRecordStore(new RecordStore(Nil, constraints.map(ConstraintEnforcer(_))))
 
   override def withConnection[T](f: (ReadConnection) => T): T =
     f(new PLReadConnection)
