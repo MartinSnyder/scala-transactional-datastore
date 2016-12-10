@@ -1,4 +1,4 @@
-name := "scala-transactional-datastore"
+name := "Scala Transactional Data Store"
 
 organization in ThisBuild := "com.martinsnyder"
 
