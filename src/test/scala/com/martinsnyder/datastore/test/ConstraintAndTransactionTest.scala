@@ -1,9 +1,9 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory._
 import org.scalatest.FunSpec
-import com.martinsnyder.datastore.{ UniqueConstraint, EqualsCondition, DataStore, Record }
-import scala.util.{ Try, Failure, Success }
+import com.martinsnyder.datastore.{ DataStore, EqualsCondition, InMemoryDataStore, Record, UniqueConstraint }
+
+import scala.util.{ Failure, Success, Try }
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
 
 object ConstraintAndTransactionTest {
@@ -107,34 +107,10 @@ abstract class ConstraintAndTransactionTest extends FunSpec {
   }
 }
 
-class Generation3ConstraintAndTransactionTest extends ConstraintAndTransactionTest {
+class InMemoryDataStoreConstraintAndTransactionTest extends ConstraintAndTransactionTest {
   import ConstraintAndTransactionTest._
 
-  override val dataStore = new DataStoreGeneration3(List(
-    UniqueConstraint(MyRecord.getClass.getName, "value")
-  ))
-}
-
-class PhaseConstraintAndTransactionTest extends ConstraintAndTransactionTest {
-  import ConstraintAndTransactionTest._
-
-  override val dataStore = new PhaseDataStore(List(
-    UniqueConstraint(MyRecord.getClass.getName, "value")
-  ))
-}
-
-class ExampleDataStoreConstraintAndTransactionTest extends ConstraintAndTransactionTest {
-  import ConstraintAndTransactionTest._
-
-  override val dataStore = new ExampleDataStore(List(
-    UniqueConstraint(MyRecord.getClass.getName, "value")
-  ))
-}
-
-class PhillyLambdaDataStoreConstraintAndTransactionTest extends ConstraintAndTransactionTest {
-  import ConstraintAndTransactionTest._
-
-  override val dataStore = new PhillyLambdaDataStore(List(
+  override val dataStore = new InMemoryDataStore(List(
     UniqueConstraint(classOf[MyRecord].getName, "value")
   ))
 }

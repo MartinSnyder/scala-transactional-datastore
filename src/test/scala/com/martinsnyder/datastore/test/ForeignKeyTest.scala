@@ -1,6 +1,5 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory.PhillyLambdaDataStore
 import com.martinsnyder.datastore._
 import org.scalatest.FunSpec
 
@@ -54,10 +53,10 @@ abstract class ForeignKeyTest extends FunSpec {
   }
 }
 
-class PhillyLambdaDataStoreForeignKeyTest extends ForeignKeyTest {
+class InMemoryDataStoreForeignKeyTest extends ForeignKeyTest {
   import ForeignKeyTest._
 
-  override val dataStore = new PhillyLambdaDataStore(List(
+  override val dataStore = new InMemoryDataStore(List(
     ForeignKeyConstraint(classOf[PointerRecord].getName, "pointer", UniqueConstraint(classOf[TargetRecord].getName, "value"))
   ))
 }

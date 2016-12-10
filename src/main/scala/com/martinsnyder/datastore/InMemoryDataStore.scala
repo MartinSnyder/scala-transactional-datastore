@@ -1,7 +1,6 @@
-package com.martinsnyder.datastore.memory
+package com.martinsnyder.datastore
 
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
-import com.martinsnyder.datastore._
 
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
@@ -9,7 +8,7 @@ import scala.util.{ Success, Try }
 
 // Implementation from presentation preparation.
 // This was the first implementation to implement foreign keys
-object PhillyLambdaDataStoreDryRun {
+object InMemoryDataStore {
   def getFieldValue(record: Record, fieldName: String) =
     record.getClass.getMethod(fieldName).invoke(record)
 
@@ -330,8 +329,8 @@ object PhillyLambdaDataStoreDryRun {
   }
 }
 
-class PhillyLambdaDataStoreDryRun(constraints: Seq[Constraint]) extends DataStore {
-  import PhillyLambdaDataStoreDryRun._
+class InMemoryDataStore(constraints: Seq[Constraint]) extends DataStore {
+  import InMemoryDataStore._
 
   val recordStore = new MutableRecordStore(new RecordStore(Nil, constraints.map(ConstraintEnforcer.apply).toList))
 

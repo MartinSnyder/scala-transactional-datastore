@@ -1,7 +1,6 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory._
-import com.martinsnyder.datastore.{ AllCondition, DataStore, Record }
+import com.martinsnyder.datastore.{ AllCondition, DataStore, InMemoryDataStore, Record }
 import org.scalatest.FunSpec
 
 import scala.util.Success
@@ -63,22 +62,6 @@ abstract class AbstractBasicTransactionTest extends FunSpec {
   }
 }
 
-class Generation2BasicTransactionTest extends AbstractBasicTransactionTest {
-  val dataStore = new DataStoreGeneration2
-}
-
-class Generation3BasicTransactionTest extends AbstractBasicTransactionTest {
-  val dataStore = new DataStoreGeneration3(Nil)
-}
-
-class PhaseBasicTransactionTest extends AbstractBasicTransactionTest {
-  val dataStore = new PhaseDataStore(Nil)
-}
-
-class ExampleDataStoreBasicTransactionTest extends AbstractBasicTransactionTest {
-  val dataStore = new ExampleDataStore(Nil)
-}
-
-class PhillyLambdaDataStoreBasicTransactionTest extends AbstractBasicTransactionTest {
-  val dataStore = new PhillyLambdaDataStore(Nil)
+class InMemoryDataStoreBasicTransactionTest extends AbstractBasicTransactionTest {
+  val dataStore = new InMemoryDataStore(Nil)
 }

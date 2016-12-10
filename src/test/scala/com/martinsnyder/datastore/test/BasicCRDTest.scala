@@ -1,7 +1,6 @@
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.memory._
-import com.martinsnyder.datastore.{ AllCondition, EqualsCondition, Record, DataStore }
+import com.martinsnyder.datastore.{ AllCondition, DataStore, EqualsCondition, InMemoryDataStore, Record }
 import org.scalatest.FunSpec
 
 import scala.util.Success
@@ -69,26 +68,6 @@ abstract class AbstractBasicCRDTest extends FunSpec {
   }
 }
 
-class Generation1BasicCRDTest extends AbstractBasicCRDTest {
-  val dataStore = new DataStoreGeneration1
-}
-
-class Generation2BasicCRDTest extends AbstractBasicCRDTest {
-  val dataStore = new DataStoreGeneration2
-}
-
-class Generation3BasicCRDTest extends AbstractBasicCRDTest {
-  val dataStore = new DataStoreGeneration3(Nil)
-}
-
-class PhaseBasicCRDTest extends AbstractBasicCRDTest {
-  val dataStore = new PhaseDataStore(Nil)
-}
-
-class ExampleDataStoreBasicCRDTest extends AbstractBasicCRDTest {
-  val dataStore = new ExampleDataStore(Nil)
-}
-
-class PhillyLambdaDataStoreBasicCRDTest extends AbstractBasicCRDTest {
-  val dataStore = new PhillyLambdaDataStore(Nil)
+class InMemoryDataStoreBasicCRDTest extends AbstractBasicCRDTest {
+  val dataStore = new InMemoryDataStore(Nil)
 }
