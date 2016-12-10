@@ -84,8 +84,7 @@ object PhaseDataStore {
       for (
         newRecordStore <- recordStore.createRecords(records);
         newConstraintEnforcers <- applyConstraints(_.createRecords(records))
-      )
-      yield {
+      ) yield {
         recordStore = newRecordStore
         constraintEnforcers = newConstraintEnforcers
       }
@@ -99,8 +98,7 @@ object PhaseDataStore {
       for (
         (newRecordStore, oldRecord) <- recordStore.updateRecord(condition, record);
         newConstraintEnforcers <- applyConstraints(_.updateRecord(oldRecord, record))
-      )
-      yield {
+      ) yield {
         recordStore = newRecordStore
         constraintEnforcers = newConstraintEnforcers
         oldRecord
@@ -114,8 +112,7 @@ object PhaseDataStore {
       for (
         (newRecordStore, deletedRecords) <- recordStore.deleteRecords(condition);
         newConstraintEnforcers <- applyConstraints(_.deleteRecords(deletedRecords))
-      )
-      yield {
+      ) yield {
         recordStore = newRecordStore
         constraintEnforcers = newConstraintEnforcers
         deletedRecords
@@ -131,8 +128,7 @@ object PhaseDataStore {
       val failures = appliedResults.filter(_.isFailure)
       if (failures.nonEmpty) {
         failures.head.asInstanceOf[Try[Seq[ConstraintEnforcer]]]
-      }
-      else {
+      } else {
         Try(appliedResults.map(_.get))
       }
     }
@@ -155,8 +151,7 @@ object PhaseDataStore {
       if (failures.nonEmpty) {
         recordStore = initialState
         failures.head.asInstanceOf[Try[Unit]]
-      }
-      else {
+      } else {
         Try(())
       }
     }
@@ -248,8 +243,7 @@ class PhaseDataStore(constraints: Seq[Constraint]) extends DataStore {
       for (
         result <- f(writeConnection);
         _ <- writeConnection.commit()
-      )
-      yield {
+      ) yield {
         result
       }
     }
@@ -271,8 +265,7 @@ class PhaseDataStore(constraints: Seq[Constraint]) extends DataStore {
     override def createRecords[T <: Record](records: Seq[Record]): Try[Unit] =
       for (
         _ <- transactionStore.createRecords(records)
-      )
-      yield {
+      ) yield {
         operations = CreateOp(records) :: operations
       }
 
@@ -283,8 +276,7 @@ class PhaseDataStore(constraints: Seq[Constraint]) extends DataStore {
     override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] =
       for (
         oldRecord <- transactionStore.updateRecord(condition, record)
-      )
-      yield {
+      ) yield {
         operations = UpdateOp(oldRecord, record) :: operations
         oldRecord
       }
@@ -295,8 +287,7 @@ class PhaseDataStore(constraints: Seq[Constraint]) extends DataStore {
     override def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
       for (
         deletedRecords <- transactionStore.deleteRecords(condition)
-      )
-      yield {
+      ) yield {
         operations = DeleteOp(deletedRecords) :: operations
         deletedRecords
       }
@@ -313,8 +304,7 @@ class PhaseDataStore(constraints: Seq[Constraint]) extends DataStore {
       for (
         result <- f(writeConnection);
         _ <- writeConnection.commit()
-      )
-      yield {
+      ) yield {
         result
       }
     }

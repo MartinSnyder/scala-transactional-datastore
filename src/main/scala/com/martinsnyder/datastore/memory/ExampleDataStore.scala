@@ -111,7 +111,6 @@ object ExampleDataStore {
     def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
       recordStore.retrieveRecords(condition)
 
-
     def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] =
       for (
         (nextStore, updatedRecord) <- recordStore.updateRecord(condition, record)
@@ -212,7 +211,6 @@ class ExampleDataStore(constraints: Seq[Constraint]) extends DataStore {
   override def withConnection[T](f: (ReadConnection) => T): T =
 
     f(new DryRunReadConnection)
-
 
   class DryRunReadConnection extends ReadConnection {
     /**

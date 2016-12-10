@@ -83,9 +83,10 @@ object PhillyLambdaDataStore {
 
             case biggerSequence =>
               throw new Exception(s"Too many records ${biggerSequence.length}")
-          });
-          newEnforcers <- applyConstraints(_.update(oldRecord, record))
-        ) yield (new RecordStore(updatedRecords, newEnforcers), oldRecord)
+          }
+        );
+        newEnforcers <- applyConstraints(_.update(oldRecord, record))
+      ) yield (new RecordStore(updatedRecords, newEnforcers), oldRecord)
 
     /**
      * Remove records from the store that match condition.  Returns the records that were removed.
@@ -243,7 +244,7 @@ class PhillyLambdaDataStore(constraints: Seq[Constraint]) extends DataStore {
     override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
       transactionStore.retrieveRecords(condition)
 
-    override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] ={
+    override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] = {
       val txn = new PLWriteConnection(transactionStore)
       for (
         result <- f(txn);
@@ -277,12 +278,12 @@ class PhillyLambdaDataStore(constraints: Seq[Constraint]) extends DataStore {
      * Remove records from the store that match condition.  Returns the records that were removed.
      */
     override def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
-    for (
-      deletedRecords <- transactionStore.deleteRecords(condition)
-    ) yield {
-      transactionLog = DeleteOp(deletedRecords) :: transactionLog
-      deletedRecords
-    }
+      for (
+        deletedRecords <- transactionStore.deleteRecords(condition)
+      ) yield {
+        transactionLog = DeleteOp(deletedRecords) :: transactionLog
+        deletedRecords
+      }
 
     def commit =
       initialRecordStore.applyOperations(transactionLog.reverse)

@@ -3,7 +3,7 @@ package com.martinsnyder.datastore.memory
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
 import com.martinsnyder.datastore._
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object DataStoreGeneration3 {
   // Uses reflection to get a named field value from a record
@@ -89,8 +89,7 @@ object DataStoreGeneration3 {
 
       if (oldValue == newValue) {
         this
-      }
-      else {
+      } else {
         if (uniqueValues.contains(newValue))
           throw new ConstraintViolation(constraint)
 
@@ -126,8 +125,7 @@ object DataStoreGeneration3 {
       val failures = wrappedEnforcers.filter(_.isFailure)
       if (failures.nonEmpty) {
         failures.head.asInstanceOf[Try[List[ConstraintEnforcer]]]
-      }
-      else {
+      } else {
         Try(wrappedEnforcers.map(_.get))
       }
     }
@@ -137,8 +135,7 @@ object DataStoreGeneration3 {
       for (
         newStore <- recordStore.createRecords(records);
         newEnforcers <- applyConstraints(_.addRecords(records))
-      )
-      yield {
+      ) yield {
         recordStore = newStore
         constraintEnforcers = newEnforcers
       }
@@ -152,8 +149,7 @@ object DataStoreGeneration3 {
       for (
         (newStore, existingRecord) <- recordStore.updateRecord(condition, record);
         newEnforcers <- applyConstraints(_.updateRecord(existingRecord, record))
-      )
-      yield {
+      ) yield {
         recordStore = newStore
         constraintEnforcers = newEnforcers
         existingRecord
@@ -164,8 +160,7 @@ object DataStoreGeneration3 {
       for (
         (newStore, deletedRecords) <- recordStore.deleteRecords(condition);
         newEnforcers <- applyConstraints(_.deleteRecords(deletedRecords))
-      )
-      yield {
+      ) yield {
         recordStore = newStore
         constraintEnforcers = newEnforcers
         deletedRecords
@@ -197,8 +192,7 @@ object DataStoreGeneration3 {
       val failures = results.filter(_.isFailure)
       if (failures.isEmpty) {
         Success(())
-      }
-      else {
+      } else {
         // Restore our starting record store at the beginning of this operation
         recordStore = startingRecordStore
         failures.head.asInstanceOf[Try[Unit]]
@@ -222,8 +216,7 @@ class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore 
     for (
       result <- f(writeConnection);
       _ <- writeConnection.commit()
-    )
-    yield {
+    ) yield {
       result
     }
   }
@@ -236,7 +229,7 @@ class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore 
       doTransaction(recordStore, f)
   }
 
-  class LocalWriteConnection(baseStore: MutableRecordStore) extends  WriteConnection {
+  class LocalWriteConnection(baseStore: MutableRecordStore) extends WriteConnection {
     // Create a copy of our mutable store to be our transaction context.  We will write back
     // to the original store when commit is called
     val transactionStore = baseStore.copy
@@ -253,8 +246,7 @@ class DataStoreGeneration3(val constraints: List[Constraint]) extends DataStore 
       transactionStore
         .createRecords(records)
         .map(_ =>
-        modifications = CreateRecords(records) :: modifications
-        )
+          modifications = CreateRecords(records) :: modifications)
 
     override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] =
       transactionStore

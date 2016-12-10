@@ -2,7 +2,7 @@ package com.martinsnyder.datastore.memory
 
 import com.martinsnyder.datastore._
 import scala.reflect.ClassTag
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
 object DataStoreGeneration2 {
   def getFieldValue(record: Record, fieldName: String) =
@@ -59,8 +59,7 @@ object DataStoreGeneration2 {
     def createRecords[T <: Record](records: Seq[Record]): Try[Unit] = synchronized(
       for (
         newStore <- recordStore.createRecords(records)
-      )
-      yield {
+      ) yield {
         recordStore = newStore
         ()
       }
@@ -69,8 +68,7 @@ object DataStoreGeneration2 {
     def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] = synchronized(
       for (
         (newStore, existingRecord) <- recordStore.updateRecord(condition, record)
-      )
-      yield {
+      ) yield {
         recordStore = newStore
         existingRecord
       }
@@ -79,8 +77,7 @@ object DataStoreGeneration2 {
     def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] = synchronized(
       for (
         (newStore, deletedRecords) <- recordStore.deleteRecords(condition)
-      )
-      yield {
+      ) yield {
         recordStore = newStore
         deletedRecords
       }
@@ -106,8 +103,7 @@ object DataStoreGeneration2 {
       val failures = results.filter(_.isFailure)
       if (failures.isEmpty) {
         Success(())
-      }
-      else {
+      } else {
         // Restore our starting record store at the beginning of this operation
         recordStore = startingRecordStore
         failures.head.asInstanceOf[Try[Unit]]
@@ -134,8 +130,7 @@ class DataStoreGeneration2 extends DataStore {
       val writeConnection = new LocalWriteConnection(recordStore.copy)
       for (
         result <- f(writeConnection)
-      )
-      yield {
+      ) yield {
         recordStore.apply(writeConnection.modifications)
         result
       }
@@ -154,8 +149,7 @@ class DataStoreGeneration2 extends DataStore {
       transactionStore
         .createRecords(records)
         .map(_ =>
-          modifications = CreateRecords(records) :: modifications
-        )
+          modifications = CreateRecords(records) :: modifications)
 
     override def updateRecord[T <: Record](condition: Condition, record: Record): Try[Record] =
       transactionStore

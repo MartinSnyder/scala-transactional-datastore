@@ -2,8 +2,8 @@ package com.martinsnyder.datastore.test
 
 import com.martinsnyder.datastore.memory._
 import org.scalatest.FunSpec
-import com.martinsnyder.datastore.{UniqueConstraint, EqualsCondition, DataStore, Record}
-import scala.util.{Try, Failure, Success}
+import com.martinsnyder.datastore.{ UniqueConstraint, EqualsCondition, DataStore, Record }
+import scala.util.{ Try, Failure, Success }
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
 
 object ConstraintAndTransactionTest {
@@ -71,7 +71,6 @@ abstract class ConstraintAndTransactionTest extends FunSpec {
         val transaction1Result = connection.inTransaction(writeConnection1 => Try({
           val insertResult1 = writeConnection1.createRecords(Seq(myRecord))
           assert(insertResult1.isSuccess)
-
 
           val transaction2Result = connection.inTransaction(writeConnection2 => Try({
             val insertResult2 = writeConnection2.createRecords(Seq(myRecord))

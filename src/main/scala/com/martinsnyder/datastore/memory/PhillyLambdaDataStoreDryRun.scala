@@ -5,7 +5,7 @@ import com.martinsnyder.datastore._
 
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
 // Implementation from presentation preparation.
 // This was the first implementation to implement foreign keys
@@ -75,7 +75,8 @@ object PhillyLambdaDataStoreDryRun {
 
             case biggerSequence =>
               throw new Exception(s"Too many records ${biggerSequence.length}")
-          });
+          }
+        );
 
         newEnforcers <- applyConstraints(_.updateRecord(oldRecord, record))
       ) yield (new RecordStore(newRecords, newEnforcers), oldRecord)
@@ -196,7 +197,7 @@ object PhillyLambdaDataStoreDryRun {
     def apply(constraint: Constraint): ConstraintEnforcer = constraint match {
       case uc: UniqueConstraint => new UniqueConstraintEnforcer(uc, Map())
       case ic: ImmutableConstraint => new ImmutableConstraintEnforcer(ic)
-      case fkc: ForeignKeyConstraint => new ForeignKeyConstraintEnforcer(fkc, Map() ,ConstraintEnforcer(fkc.target))
+      case fkc: ForeignKeyConstraint => new ForeignKeyConstraintEnforcer(fkc, Map(), ConstraintEnforcer(fkc.target))
     }
   }
   sealed trait ConstraintEnforcer {
@@ -219,22 +220,19 @@ object PhillyLambdaDataStoreDryRun {
 
           case _ =>
             None
-        }
-      )
+        })
 
       // Pointer to a non-existent target
       if (targetRecords.filter(_.isEmpty).nonEmpty) {
         Try(throw new ConstraintViolation(constraint))
-      }
-      else {
+      } else {
         val updatedValues = incomingValues.foldLeft(currentValues)((progress, nextVal) =>
           progress.get(nextVal) match {
             case Some(count) =>
               progress + (nextVal -> (count + 1))
             case None =>
               progress + (nextVal -> 1)
-          }
-        )
+          })
 
         for (
           updatedTargetValues <- targetValues.createRecords(records)
@@ -256,14 +254,12 @@ object PhillyLambdaDataStoreDryRun {
 
             if (occurrences > 0) {
               Try(throw new ConstraintViolation(constraint))
-            }
-            else {
+            } else {
               for (
                 updatedTargetValues <- targetValues.deleteRecords(records)
               ) yield new ForeignKeyConstraintEnforcer(constraint, currentValues, updatedTargetValues)
             }
-          }
-          else {
+          } else {
             Try(this)
           }
       }
@@ -293,8 +289,7 @@ object PhillyLambdaDataStoreDryRun {
         new UniqueConstraintEnforcer(constraint, updatedValues)
 
         this
-      }
-      else {
+      } else {
         this
       }
     )
@@ -315,8 +310,7 @@ object PhillyLambdaDataStoreDryRun {
         case EqualsCondition(conditionField, conditionValue: AnyRef) =>
           if (className == constraint.className && conditionField == constraint.fieldName) {
             uniqueValues.get(conditionValue).map(record => List(record))
-          }
-          else {
+          } else {
             None
           }
 
@@ -370,7 +364,7 @@ class PhillyLambdaDataStoreDryRun(constraints: Seq[Constraint]) extends DataStor
     override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
       transactionStore.retrieveRecords(condition)
 
-    override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] ={
+    override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] = {
       val txn = new PLWriteConnection(transactionStore)
       for (
         result <- f(txn);
@@ -404,12 +398,12 @@ class PhillyLambdaDataStoreDryRun(constraints: Seq[Constraint]) extends DataStor
      * Remove records from the store that match condition.  Returns the records that were removed.
      */
     override def deleteRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
-    for (
-      deletedRecords <- transactionStore.deleteRecords(condition)
-    ) yield {
-      transactionLog = DeleteOp(deletedRecords) :: transactionLog
-      deletedRecords
-    }
+      for (
+        deletedRecords <- transactionStore.deleteRecords(condition)
+      ) yield {
+        transactionLog = DeleteOp(deletedRecords) :: transactionLog
+        deletedRecords
+      }
 
     def commit =
       initialRecordStore.applyOperations(transactionLog.reverse)

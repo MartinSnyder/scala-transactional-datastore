@@ -1,7 +1,7 @@
 package com.martinsnyder.datastore.test
 
 import com.martinsnyder.datastore.memory._
-import com.martinsnyder.datastore.{EqualsCondition, DataStore, Record}
+import com.martinsnyder.datastore.{ EqualsCondition, DataStore, Record }
 import org.scalatest.FunSpec
 
 import scala.util.Success
