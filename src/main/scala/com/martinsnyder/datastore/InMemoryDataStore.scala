@@ -1,3 +1,27 @@
+/*
+    The MIT License (MIT)
+
+    Copyright (c) 2014 Martin Snyder
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+*/
+
 package com.martinsnyder.datastore
 
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
@@ -9,7 +33,7 @@ import scala.util.{ Success, Try }
 // Implementation from presentation preparation.
 // This was the first implementation to implement foreign keys
 object InMemoryDataStore {
-  def getFieldValue(record: Record, fieldName: String) =
+  def getFieldValue(record: Record, fieldName: String): AnyRef =
     record.getClass.getMethod(fieldName).invoke(record)
 
   def conditionToPredicate(condition: Condition): Record => Boolean = {
@@ -25,14 +49,14 @@ object InMemoryDataStore {
     }
   }
 
-  def filter(records: List[Record], condition: Condition) =
+  def filter(records: List[Record], condition: Condition): List[Record] =
     records.filter(conditionToPredicate(condition))
 
   class ListWrapper(records: List[Record]) {
-    def filter(condition: Condition) =
+    def filter(condition: Condition): List[Record] =
       records.filter(conditionToPredicate(condition))
 
-    def partition(condition: Condition) =
+    def partition(condition: Condition): (List[Record], List[Record]) =
       records.partition(conditionToPredicate(condition))
   }
   implicit def doWrapList(records: List[Record]): ListWrapper = new ListWrapper(records)
@@ -176,7 +200,7 @@ object InMemoryDataStore {
         deletedRecords
       }
 
-    def copy =
+    def copy: MutableRecordStore =
       new MutableRecordStore(recordStore)
 
     def applyOperations(transactionLog: List[Operation]): Try[Unit] =
@@ -207,7 +231,7 @@ object InMemoryDataStore {
   }
 
   class ForeignKeyConstraintEnforcer(constraint: ForeignKeyConstraint, currentValues: Map[AnyRef, Int], targetValues: ConstraintEnforcer) extends ConstraintEnforcer {
-    override def createRecords[T <: Record](records: Seq[Record]) = {
+    override def createRecords[T <: Record](records: Seq[Record]): Try[ForeignKeyConstraintEnforcer] = {
       val applicableRecords = records.filter(_.getClass.getName == constraint.sourceClassName)
       val incomingValues = applicableRecords.map(getFieldValue(_, constraint.sourceFieldName))
 
@@ -222,8 +246,8 @@ object InMemoryDataStore {
         })
 
       // Pointer to a non-existent target
-      if (targetRecords.filter(_.isEmpty).nonEmpty) {
-        Try(throw new ConstraintViolation(constraint))
+      if (targetRecords.exists(_.isEmpty)) {
+        Try(throw ConstraintViolation(constraint))
       } else {
         val updatedValues = incomingValues.foldLeft(currentValues)((progress, nextVal) =>
           progress.get(nextVal) match {
@@ -239,9 +263,9 @@ object InMemoryDataStore {
       }
     }
 
-    override def updateRecord[T <: Record](oldRecord: Record, newRecord: Record) = ???
+    override def updateRecord[T <: Record](oldRecord: Record, newRecord: Record): Nothing = ???
 
-    override def deleteRecords[T <: Record](records: Seq[Record]) =
+    override def deleteRecords[T <: Record](records: Seq[Record]): Try[ForeignKeyConstraintEnforcer] =
       records.headOption.map(_.getClass.getName) match {
         case None =>
           Try(this)
@@ -252,7 +276,7 @@ object InMemoryDataStore {
             val occurrences = values.map(currentValues.getOrElse(_, 0: Int)).sum
 
             if (occurrences > 0) {
-              Try(throw new ConstraintViolation(constraint))
+              Try(throw ConstraintViolation(constraint))
             } else {
               for (
                 updatedTargetValues <- targetValues.deleteRecords(records)
@@ -265,25 +289,27 @@ object InMemoryDataStore {
   }
 
   class UniqueConstraintEnforcer(constraint: UniqueConstraint, uniqueValues: Map[AnyRef, Record]) extends ConstraintEnforcer {
-    override def createRecords[T <: Record](records: Seq[Record]) = Try({
+    override def createRecords[T <: Record](records: Seq[Record]): Try[UniqueConstraintEnforcer] = Try({
       val applicableRecords = records.filter(_.getClass.getName == constraint.className)
       val incomingValues = applicableRecords.map(record => getFieldValue(record, constraint.fieldName) -> record)
 
       val updatedValues = uniqueValues ++ incomingValues.toMap
-      if (updatedValues.size != (uniqueValues.size + applicableRecords.size))
+      if (updatedValues.size != (uniqueValues.size + applicableRecords.size)) {
         throw ConstraintViolation(constraint)
+      }
 
       new UniqueConstraintEnforcer(constraint, updatedValues)
     })
 
-    override def updateRecord[T <: Record](oldRecord: Record, newRecord: Record) = Try(
+    override def updateRecord[T <: Record](oldRecord: Record, newRecord: Record): Try[UniqueConstraintEnforcer] = Try(
       if (oldRecord.getClass.getName == newRecord.getClass.getName && newRecord.getClass.getName == constraint.className) {
         val oldValue = getFieldValue(oldRecord, constraint.fieldName)
         val newValue = getFieldValue(newRecord, constraint.fieldName)
 
         val updatedValues = uniqueValues - oldValue + (newValue -> newRecord)
-        if (uniqueValues.size != updatedValues.size)
+        if (uniqueValues.size != updatedValues.size) {
           throw ConstraintViolation(constraint)
+        }
 
         new UniqueConstraintEnforcer(constraint, updatedValues)
 
@@ -293,13 +319,14 @@ object InMemoryDataStore {
       }
     )
 
-    override def deleteRecords[T <: Record](records: Seq[Record]) = Try({
+    override def deleteRecords[T <: Record](records: Seq[Record]): Try[UniqueConstraintEnforcer] = Try({
       val applicableRecords = records.filter(_.getClass.getName == constraint.className)
       val outgoingValues = applicableRecords.map(getFieldValue(_, constraint.fieldName))
 
       val updatedValues = uniqueValues -- outgoingValues
-      if (updatedValues.size != (uniqueValues.size - applicableRecords.size))
+      if (updatedValues.size != (uniqueValues.size - applicableRecords.size)) {
         throw ConstraintViolation(constraint)
+      }
 
       new UniqueConstraintEnforcer(constraint, updatedValues)
     })
@@ -320,11 +347,13 @@ object InMemoryDataStore {
   }
 
   class ImmutableConstraintEnforcer(constraint: ImmutableConstraint) extends ConstraintEnforcer {
-    override def createRecords[T <: Record](records: Seq[Record]) =
+    override def createRecords[T <: Record](records: Seq[Record]): Try[ImmutableConstraintEnforcer] =
       Try(this)
-    override def updateRecord[T <: Record](oldRecord: Record, newRecord: Record) =
+
+    override def updateRecord[T <: Record](oldRecord: Record, newRecord: Record): Try[Nothing] =
       Try(throw ConstraintViolation(constraint))
-    override def deleteRecords[T <: Record](records: Seq[Record]) =
+
+    override def deleteRecords[T <: Record](records: Seq[Record]): Try[Nothing] =
       Try(throw ConstraintViolation(constraint))
   }
 }
@@ -357,8 +386,8 @@ class InMemoryDataStore(constraints: Seq[Constraint]) extends DataStore {
   }
 
   class PLWriteConnection(initialRecordStore: MutableRecordStore) extends WriteConnection {
-    val transactionStore = initialRecordStore.copy
-    var transactionLog: List[Operation] = Nil
+    private val transactionStore = initialRecordStore.copy
+    private var transactionLog: List[Operation] = Nil
 
     override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
       transactionStore.retrieveRecords(condition)
@@ -404,7 +433,7 @@ class InMemoryDataStore(constraints: Seq[Constraint]) extends DataStore {
         deletedRecords
       }
 
-    def commit =
+    def commit: Try[Unit] =
       initialRecordStore.applyOperations(transactionLog.reverse)
   }
 }
