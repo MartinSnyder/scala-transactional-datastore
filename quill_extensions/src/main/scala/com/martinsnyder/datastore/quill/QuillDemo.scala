@@ -22,24 +22,30 @@
     SOFTWARE.
 */
 
-name := "Scala Transactional Data Store"
+package com.martinsnyder.datastore.quill
 
-organization in ThisBuild := "com.martinsnyder"
+import io.getquill._
+import io.getquill.ast.Filter
 
-version in ThisBuild := "0.0.1"
+object QuillDemo {
+  case class Contact(phone: String, address: String) extends Embedded
+  case class Person(id: Int, name: String, contact: Contact)
 
-scalaVersion in ThisBuild := "2.11.8"
+  def main(args: Array[String]): Unit = {
+    val ctx = new MirrorContext[MirrorIdiom, Literal]
 
-scalacOptions in ThisBuild ++= Seq("-feature", "-deprecation")
+    import ctx._
 
-lazy val inmemory_store = project.in(file("inmemory_store"))
-  .settings(libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-  ))
+    val q = quote { query[Person].filter(_.id == 5) }
+    val stuff = ctx.run(q)
 
-lazy val quill_extensions = project.in(file("quill_extensions"))
-  .dependsOn(inmemory_store)
-  .settings(libraryDependencies ++= Seq(
-    "io.getquill" %% "quill-jdbc" % "1.0.1",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-  ))
+    q.ast match {
+      case filter: Filter =>
+        println(filter.alias)
+
+    }
+
+    println(q.ast)
+    println(stuff)
+  }
+}
