@@ -37,9 +37,7 @@ object RecordStore {
         _ => true
 
       case ExactMatchCondition(matchRecords) =>
-        r => {
-          matchRecords.contains(r)
-        }
+        matchRecords.contains
 
       case EqualsCondition(fieldName, value) =>
         _.getFieldValue(fieldName) == value
