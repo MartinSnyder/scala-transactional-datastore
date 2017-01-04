@@ -37,7 +37,9 @@ object RecordStore {
         _ => true
 
       case ExactMatchCondition(matchRecords) =>
-        matchRecords.contains
+        r => {
+          matchRecords.contains(r)
+        }
 
       case EqualsCondition(fieldName, value) =>
         _.getFieldValue(fieldName) == value
@@ -113,7 +115,7 @@ class RecordStore(storedRecords: List[Record], enforcers: List[ConstraintEnforce
               .map(_._1)
 
           case DeleteOp(deletedRecords) =>
-            store.deleteRecords(ExactMatchCondition(deletedRecords))
+            store.deleteRecords(ExactMatchCondition(deletedRecords))(ClassTag(deletedRecords.head.getClass))
               .map(_._1)
         }
       })
