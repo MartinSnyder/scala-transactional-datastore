@@ -25,10 +25,11 @@
 package com.martinsnyder.datastore.test
 
 import org.scalatest.FunSpec
-import com.martinsnyder.datastore.{ DataStore, EqualsCondition, InMemoryDataStore, Record, UniqueConstraint }
+import com.martinsnyder.datastore.{ DataStore, EqualsCondition, Record, UniqueConstraint }
 
 import scala.util.{ Failure, Success, Try }
 import com.martinsnyder.datastore.DataStore.ConstraintViolation
+import com.martinsnyder.datastore.inmemory.InMemoryDataStore
 
 object ConstraintAndTransactionTest {
   case class MyRecord(value: String) extends Record

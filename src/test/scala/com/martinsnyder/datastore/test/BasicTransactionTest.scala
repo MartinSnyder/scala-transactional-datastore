@@ -24,7 +24,8 @@
 
 package com.martinsnyder.datastore.test
 
-import com.martinsnyder.datastore.{ AllCondition, DataStore, InMemoryDataStore, Record }
+import com.martinsnyder.datastore.inmemory.InMemoryDataStore
+import com.martinsnyder.datastore.{ AllCondition, DataStore, Record }
 import org.scalatest.FunSpec
 
 import scala.util.Success

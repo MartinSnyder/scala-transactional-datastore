@@ -22,9 +22,12 @@
     SOFTWARE.
 */
 
-package com.martinsnyder.datastore
+package com.martinsnyder.datastore.inmemory
 
-trait Record {
-  def getFieldValue(fieldName: String): AnyRef =
-    getClass.getMethod(fieldName).invoke(this)
-}
+import com.martinsnyder.datastore.Record
+
+sealed trait Operation
+
+case class CreateOp(records: Seq[Record]) extends Operation
+case class UpdateOp(oldRecord: Record, newRecord: Record) extends Operation
+case class DeleteOp(records: Seq[Record]) extends Operation

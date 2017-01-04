@@ -25,6 +25,7 @@
 package com.martinsnyder.datastore.test
 
 import com.martinsnyder.datastore._
+import com.martinsnyder.datastore.inmemory.InMemoryDataStore
 import org.scalatest.FunSpec
 
 object ForeignKeyTest {
