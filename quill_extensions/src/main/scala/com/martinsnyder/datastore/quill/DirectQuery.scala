@@ -24,24 +24,12 @@
 
 package com.martinsnyder.datastore.quill
 
-import com.martinsnyder.datastore.DataStore
+import com.martinsnyder.datastore.{ DataStore, EqualsCondition }
 import com.martinsnyder.datastore.quill.Data.Person
 
-import scala.language.implicitConversions
 import scala.util.Try
 
-object QuillDemo {
-  def main(args: Array[String]): Unit = {
-
-    val dataStore = Data.sampleDataStore
-
-    def execute(f: DataStore => Try[Seq[Person]]): Unit = {
-      val names: Try[Seq[String]] = f(dataStore).map(_.map(person => s"${person.givenName} ${person.familyName}"))
-
-      println(names)
-    }
-
-    execute(DirectQuery.unemployed)
-    execute(LooseQuillQuery.unemployed)
-  }
+object DirectQuery {
+  def unemployed(dataStore: DataStore): Try[Seq[Person]] =
+    dataStore.withConnection(_.retrieveRecords[Person](EqualsCondition("occupation", None)))
 }

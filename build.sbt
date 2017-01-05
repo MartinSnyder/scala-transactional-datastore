@@ -40,7 +40,7 @@ lazy val inmemory_store = project.in(file("inmemory_store"))
 lazy val quill_extensions = project.in(file("quill_extensions"))
   .dependsOn(inmemory_store)
   .settings(libraryDependencies ++= Seq(
-    "io.getquill" %% "quill-jdbc" % "1.0.1",
+    "io.getquill" %% "quill-core" % "1.0.1",
     "org.scala-lang" % "scala-compiler" % "2.11.8",
     "org.scalatest" %% "scalatest" % "3.0.1" % "test"
   ))

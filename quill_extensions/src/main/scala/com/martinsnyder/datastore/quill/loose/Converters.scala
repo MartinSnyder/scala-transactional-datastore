@@ -22,26 +22,38 @@
     SOFTWARE.
 */
 
-package com.martinsnyder.datastore.quill
+package com.martinsnyder.datastore.quill.loose
 
-import com.martinsnyder.datastore.DataStore
-import com.martinsnyder.datastore.quill.Data.Person
+import com.martinsnyder.datastore.quill.loose
+import com.martinsnyder.datastore.{ Condition, EqualsCondition }
+import io.getquill.ast.{ Ast, BinaryOperation, EqualityOperator, Filter, Property }
 
-import scala.language.implicitConversions
-import scala.util.Try
+import scala.annotation.tailrec
+import scala.language.{ implicitConversions, reflectiveCalls }
+import scala.reflect.runtime.currentMirror
+import scala.tools.reflect.ToolBox
 
-object QuillDemo {
-  def main(args: Array[String]): Unit = {
+object Converters {
+  type AstProvider = { def ast: Ast }
 
-    val dataStore = Data.sampleDataStore
+  /*
+   * Use duck typing because the trait we want to use (Quoted) is not available statically, only
+   * as a type member of a Context instance
+   */
+  implicit def toCondition(astProvider: AstProvider): Condition =
+    loose.Converters.toCondition(astProvider.ast)
 
-    def execute(f: DataStore => Try[Seq[Person]]): Unit = {
-      val names: Try[Seq[String]] = f(dataStore).map(_.map(person => s"${person.givenName} ${person.familyName}"))
+  @tailrec
+  private def toCondition(ast: Ast): Condition =
+    ast match {
+      case filter: Filter =>
+        toCondition(filter.body)
 
-      println(names)
+      case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, Property(_, value)) =>
+        val toolbox = currentMirror.mkToolBox()
+        EqualsCondition(attributeName, toolbox.eval(toolbox.parse(value.toString)))
+
+      case _ =>
+        ???
     }
-
-    execute(DirectQuery.unemployed)
-    execute(LooseQuillQuery.unemployed)
-  }
 }

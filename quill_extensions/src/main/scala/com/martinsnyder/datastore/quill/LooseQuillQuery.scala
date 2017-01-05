@@ -26,22 +26,17 @@ package com.martinsnyder.datastore.quill
 
 import com.martinsnyder.datastore.DataStore
 import com.martinsnyder.datastore.quill.Data.Person
+import com.martinsnyder.datastore.quill.loose.Converters._
+import io.getquill.{ Literal, MirrorContext, MirrorIdiom }
 
 import scala.language.implicitConversions
 import scala.util.Try
 
-object QuillDemo {
-  def main(args: Array[String]): Unit = {
+object LooseQuillQuery {
+  def unemployed(dataStore: DataStore): Try[Seq[Person]] = {
+    val ctx = new MirrorContext[MirrorIdiom, Literal]
+    import ctx._
 
-    val dataStore = Data.sampleDataStore
-
-    def execute(f: DataStore => Try[Seq[Person]]): Unit = {
-      val names: Try[Seq[String]] = f(dataStore).map(_.map(person => s"${person.givenName} ${person.familyName}"))
-
-      println(names)
-    }
-
-    execute(DirectQuery.unemployed)
-    execute(LooseQuillQuery.unemployed)
+    dataStore.withConnection(_.retrieveRecords[Person](quote { query[Person].filter(_.occupation == None) }))
   }
 }
