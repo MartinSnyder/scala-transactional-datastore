@@ -70,7 +70,7 @@
     </check>
     <check level="warning" class="org.scalastyle.scalariform.MagicNumberChecker" enabled="true">
         <parameters>
-            <parameter name="ignore"><![CDATA[-1,0,1,2,3]]></parameter>
+            <parameter name="ignore"><![CDATA[-1,0,1,2,3,1960,1970]]></parameter>
         </parameters>
     </check>
     <check level="warning" class="org.scalastyle.scalariform.NoWhitespaceBeforeLeftBracketChecker"

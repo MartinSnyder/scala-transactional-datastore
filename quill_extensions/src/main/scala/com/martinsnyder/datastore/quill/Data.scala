@@ -22,25 +22,30 @@
     SOFTWARE.
 */
 
-name := "Scala Transactional Data Store"
+package com.martinsnyder.datastore.quill
 
-organization in ThisBuild := "com.martinsnyder"
+import java.time.LocalDate
 
-version in ThisBuild := "0.0.1"
+import com.martinsnyder.datastore.inmemory.InMemoryDataStore
+import com.martinsnyder.datastore.{ DataStore, Record }
 
-scalaVersion in ThisBuild := "2.11.8"
+import scala.util.Try
 
-scalacOptions in ThisBuild ++= Seq("-feature", "-deprecation")
+object Data {
+  case class Person(givenName: String, familyName: String, birthday: LocalDate, occupation: Option[String]) extends Record
 
-lazy val inmemory_store = project.in(file("inmemory_store"))
-  .settings(libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-  ))
+  private val initialPeople = Seq(
+    Person("Abe", "Allen", LocalDate.of(1960, 1, 1), None),
+    Person("Betsy", "Billingsly", LocalDate.of(1970, 2, 2), Some("Accountant"))
+  )
 
-lazy val quill_extensions = project.in(file("quill_extensions"))
-  .dependsOn(inmemory_store)
-  .settings(libraryDependencies ++= Seq(
-    "io.getquill" %% "quill-jdbc" % "1.0.1",
-    "org.scala-lang" % "scala-compiler" % "2.11.8",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-  ))
+  def sampleDataStore: DataStore = {
+    val dataStore = new InMemoryDataStore(Nil)
+
+    dataStore.withConnection(_.inTransaction(conn => Try({
+      conn.createRecords(initialPeople)
+    })))
+
+    dataStore
+  }
+}

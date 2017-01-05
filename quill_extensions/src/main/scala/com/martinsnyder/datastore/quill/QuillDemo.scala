@@ -24,28 +24,56 @@
 
 package com.martinsnyder.datastore.quill
 
+import com.martinsnyder.datastore.quill.Data.Person
+import com.martinsnyder.datastore.{ Condition, EqualsCondition }
 import io.getquill._
-import io.getquill.ast.Filter
+import io.getquill.ast.{ Ast, BinaryOperation, EqualityOperator, Filter, Property }
+
+import scala.language.implicitConversions
+import scala.reflect.runtime.currentMirror
+import scala.tools.reflect.ToolBox
 
 object QuillDemo {
-  case class Contact(phone: String, address: String) extends Embedded
-  case class Person(id: Int, name: String, contact: Contact)
+  type QuillContext = MirrorContext[MirrorIdiom, Literal]
+
+  def astToCondition(ast: Ast): Condition =
+    ast match {
+      case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, Property(_, value)) =>
+        val toolbox = currentMirror.mkToolBox()
+        EqualsCondition(attributeName, toolbox.eval(toolbox.parse(value.toString)))
+
+      case _ =>
+        ???
+    }
 
   def main(args: Array[String]): Unit = {
-    val ctx = new MirrorContext[MirrorIdiom, Literal]
+    val ctx = new QuillContext
 
     import ctx._
 
-    val q = quote { query[Person].filter(_.id == 5) }
-    val stuff = ctx.run(q)
+    implicit def toCondition(q: ctx.Quoted[_]): Condition = {
+      q.ast match {
+        case filter: Filter =>
+          astToCondition(filter.body)
 
-    q.ast match {
-      case filter: Filter =>
-        println(filter.alias)
-
+        case _ =>
+          ???
+      }
     }
 
-    println(q.ast)
-    println(stuff)
+    val dataStore = Data.sampleDataStore
+
+    val unemployed =
+      dataStore
+        .withConnection(_.retrieveRecords[Person](EqualsCondition("occupation", None)))
+        .map(_.map(person => s"${person.givenName} ${person.familyName}"))
+
+    val quillUnemployed =
+      dataStore
+        .withConnection(_.retrieveRecords[Person](quote { query[Person].filter(_.occupation == None) }))
+        .map(_.map(person => s"${person.givenName} ${person.familyName}"))
+
+    println(unemployed)
+    println(quillUnemployed)
   }
 }
