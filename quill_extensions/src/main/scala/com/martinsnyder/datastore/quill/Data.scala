@@ -38,7 +38,7 @@ object Data {
 
   private val initialPeople = Seq(
     Person("Abe", "Allen", LocalDate.of(1960, 1, 1), None),
-    Person("Betsy", "Billingsly", LocalDate.of(1970, 2, 2), Some("Accountant"))
+    Person("Betsy", "Baker", LocalDate.of(1970, 2, 2), Some("Accountant"))
   )
 
   def sampleDataStore: DataStore = {

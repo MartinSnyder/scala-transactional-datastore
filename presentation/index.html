@@ -25,38 +25,133 @@
 		<div class="reveal">
 			<div class="slides">
 				<section>
-					<h1>Scala Transactional Datastore</h1>
+					<h1>Building a Custom Query Engine with Quill</h1>
 					<p>
 						<small><a href="http://martinsnyder.net">Martin Snyder</a> / <a href="https://twitter.com/MartinSnyder">@MartinSnyder</a> / <a href="http://wingspan.com">Wingspan Technology, Inc.</a></small>
 					</p>
+                    <aside class="notes">
+                    </aside>
 				</section>
 
 				<section>
-					<h2>Project Goals</h2>
+					<h2>2014 - Live coding a CRUD database in Scala</h2>
 					<ul>
-						<li>Scala tutorial</li>
-						<li>Functional programming application</li>
-						<li>High level database mechanics</li>
+						<li>In-Memory Transactional CRUD Data Store</li>
+                        <li>Constraints</li>
+                        <li>Query Optimizer</li>
 					</ul>
+                    <aside class="notes">
+                        <ul>
+                            <li>Applied Functional Programming</li>
+                            <li>Database implementation concepts</li>
+                        </ul>
+                    </aside>
+				</section>
+
+                <section>
+                    <h2>Our data set</h2>
+<pre><code class="scala">case class Person(
+  givenName: String,
+  familyName: String,
+  birthday: LocalDate,
+  occupation: Option[String]) extends Record
+
+val dataStore = new InMemoryDataStore(Seq(
+  UniqueConstraint(classOf[Person].getName, "givenName")))
+
+dataStore...createRecords(Seq(
+  Person("Abe", "Allen", LocalDate.of(1960, 1, 1),
+    None),
+  Person("Betsy", "Baker", LocalDate.of(1970, 2, 2),
+    Some("Accountant"))
+))
+
+dataStore...createRecords((1 to 1000000)
+  .map(number => Person(s"Bee #$number", "Worker", LocalDate.now,
+    Some("Busywork")))
+)</code></pre>
+                    <aside class="notes">
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Example 1 - Scala Predicates</h2>
+                    <pre><code class="scala">connection
+  .filter[Person](
+    person => person.occupation.isEmpty
+  )
+>> 116 mSecs: Success(List(Abe Allen))
+
+connection
+  .filter[Person](
+    person => person.givenName == "Bee #91236"
+  )
+>> 102 mSecs: Success(List(Bee #91236 Worker))</code></pre>
+                    <aside class="notes">
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Example 2 - "Conditions" API</h2>
+                    <pre><code class="scala">connection
+  .retrieveRecords[Person](
+    EqualsCondition("occupation", None)
+  )
+>> 490 mSecs: Success(List(Abe Allen))
+
+connection
+  .retrieveRecords[Person](
+    EqualsCondition("givenName", "Bee #91236")
+  )
+>> 2 mSecs: Success(List(Bee #91236 Worker))</code></pre>
+                    <aside class="notes">
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Example 3 - Quill</h2>
+                    <pre><code class="scala">connection
+  .retrieveRecords[Person](
+    quote { query[Person].filter(_.occupation == None) }
+  )
+>> 810 mSecs: Success(List(Abe Allen))
+
+connection
+  .retrieveRecords[Person](
+    quote { query[Person].filter(_.givenName == "Bee #91232") }
+  )
+>> 3 mSecs: Success(List(Bee #91232 Worker))</code></pre>
+                    <aside class="notes">
+                    </aside>
+                </section>
+
+                <section>
+					<h2>Links</h2>
+					<ul>
+                        <li>Repository: <a href="https://github.com/MartinSnyder/scala-transactional-datastore">MartinSnyder/scala-transactional-datastore</a></li>
+                        <li>Quill: <a href="http://getquill.io">http://getquill.io</a></li>
+                        <li>Blog: <a href="http://martinsnyder.net">http://martinsnyder.net</a></li>
+					</ul>
+                    <aside class="notes">
+                    </aside>
 				</section>
 
 				<section>
-					<h2>GitHub Repository</h2>
+					<h1>Thank You!</h1>
 					<p>
-						<a href="https://github.com/MartinSnyder/scala-transactional-datastore">MartinSnyder/scala-transactional-datastore</a>
+						<small><a href="http://martinsnyder.net">Martin Snyder</a> / <a href="https://twitter.com/MartinSnyder">@MartinSnyder</a> / <a href="http://wingspan.com">Wingspan Technology, Inc.</a></small>
 					</p>
-				</section>
-
-				<section>
-					<h2>Project Sponsor</h2>
-					<p>
-						<a href="http://www.wingspan.com/career_open_positions/">Wingspan Technology, Inc.</a><br />
-						Wingspan creates document management applications for regulated industries by delivering a consumer user
-						experience to enterprise applications
-					</p>
+                    <aside class="notes">
+                    </aside>
 				</section>
 			</div>
 		</div>
+
+        <!--
+        Any spot where you have query constructs so you can generate/execute something
+
+        these things don't serialize
+        -->
 
 		<script src="lib/js/head.min.js"></script>
 		<script src="js/reveal.js"></script>
