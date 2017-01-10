@@ -27,11 +27,13 @@ package com.martinsnyder.datastore.quill
 import java.time.LocalDate
 
 import com.martinsnyder.datastore.inmemory.InMemoryDataStore
-import com.martinsnyder.datastore.{ DataStore, Record }
+import com.martinsnyder.datastore.{ DataStore, Record, UniqueConstraint }
 
 import scala.util.Try
 
 object Data {
+  val numberWorkerBees = 1000000
+
   case class Person(givenName: String, familyName: String, birthday: LocalDate, occupation: Option[String]) extends Record
 
   private val initialPeople = Seq(
@@ -40,10 +42,17 @@ object Data {
   )
 
   def sampleDataStore: DataStore = {
-    val dataStore = new InMemoryDataStore(Nil)
+    val dataStore = new InMemoryDataStore(Seq(UniqueConstraint(classOf[Person].getName, "givenName")))
 
     dataStore.withConnection(_.inTransaction(conn => Try({
       conn.createRecords(initialPeople)
+    })))
+
+    // Create some worker bees
+    dataStore.withConnection(_.inTransaction(conn => Try({
+      conn.createRecords(
+        (1 to numberWorkerBees).map(number => Person(s"Bee #$number", "Worker", LocalDate.now, Some("Busywork")))
+      )
     })))
 
     dataStore

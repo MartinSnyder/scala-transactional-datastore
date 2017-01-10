@@ -63,12 +63,20 @@ class RecordStore(storedRecords: List[Record], enforcers: List[ConstraintEnforce
     queryConstraints[T](condition).map({
       case None =>
         storedRecords
-          .filter(condition)
+          .filter(_.getClass == recordTag.runtimeClass)
           .map(_.asInstanceOf[T])
+          .filter(condition)
 
       case Some(results) =>
         results
     })
+
+  def filter[T <: Record](predicate: T => Boolean)(implicit recordTag: ClassTag[T]): Try[Seq[T]] = Try(
+    storedRecords
+      .filter(_.getClass == recordTag.runtimeClass)
+      .map(_.asInstanceOf[T])
+      .filter(predicate)
+  )
 
   /**
    * Update a single existing record.  If condition does not resolve to exactly one record, then

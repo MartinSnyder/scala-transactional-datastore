@@ -37,6 +37,11 @@ trait ReadConnection extends Connection {
   def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]]
 
   /**
+   * Load records using a predicate.
+   */
+  def filter[T <: Record](predicate: T => Boolean)(implicit recordTag: ClassTag[T]): Try[Seq[T]]
+
+  /**
    * Perform write operations in a transaction
    */
   def inTransaction[T](f: WriteConnection => Try[T]): Try[T]

@@ -43,6 +43,9 @@ class InMemoryDataStore(constraints: Seq[Constraint]) extends DataStore {
     override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
       recordStore.retrieveRecords(condition)
 
+    def filter[T <: Record](predicate: T => Boolean)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
+      recordStore.filter(predicate)
+
     /**
      * Perform write operations in a transaction
      */
@@ -61,6 +64,9 @@ class InMemoryDataStore(constraints: Seq[Constraint]) extends DataStore {
 
     override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
       transactionStore.retrieveRecords(condition)
+
+    def filter[T <: Record](predicate: T => Boolean)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
+      transactionStore.filter(predicate)
 
     override def inTransaction[T](f: (WriteConnection) => Try[T]): Try[T] = {
       val txn = new PLWriteConnection(transactionStore)

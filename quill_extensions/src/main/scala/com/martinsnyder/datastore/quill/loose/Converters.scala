@@ -26,7 +26,7 @@ package com.martinsnyder.datastore.quill.loose
 
 import com.martinsnyder.datastore.quill.loose
 import com.martinsnyder.datastore.{ Condition, EqualsCondition }
-import io.getquill.ast.{ Ast, BinaryOperation, EqualityOperator, Filter, Property }
+import io.getquill.ast.{ Ast, BinaryOperation, Constant, EqualityOperator, Filter, Property }
 
 import scala.annotation.tailrec
 import scala.language.{ implicitConversions, reflectiveCalls }
@@ -35,6 +35,11 @@ import scala.tools.reflect.ToolBox
 
 object Converters {
   type AstProvider = { def ast: Ast }
+
+  def warm(): Unit = {
+    val toolbox = currentMirror.mkToolBox()
+    toolbox.eval(toolbox.parse("5"))
+  }
 
   /*
    * Use duck typing because the trait we want to use (Quoted) is not available statically, only
@@ -48,6 +53,9 @@ object Converters {
     ast match {
       case filter: Filter =>
         toCondition(filter.body)
+
+      case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, Constant(v)) =>
+        EqualsCondition(attributeName, v)
 
       case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, Property(_, value)) =>
         val toolbox = currentMirror.mkToolBox()

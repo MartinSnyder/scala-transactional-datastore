@@ -45,6 +45,12 @@ class MutableRecordStore(private var recordStore: RecordStore) {
     recordStore.retrieveRecords(condition)
 
   /**
+   * Load records from the store using a predicate.
+   */
+  def filter[T <: Record](predicate: T => Boolean)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
+    recordStore.filter(predicate)
+
+  /**
    * Update a single existing record.  If condition does not resolve to exactly one record, then
    * an exception will be thrown.  Returns previous copy of the record
    */
