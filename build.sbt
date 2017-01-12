@@ -41,6 +41,11 @@ lazy val quill_extensions = project.in(file("quill_extensions"))
   .dependsOn(inmemory_store)
   .settings(libraryDependencies ++= Seq(
     "io.getquill" %% "quill-core" % "1.0.1",
+    "com.fasterxml.jackson.core" % "jackson-core" % "2.8.4",
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.8.3",
     "org.scala-lang" % "scala-compiler" % "2.11.8",
     "org.scalatest" %% "scalatest" % "3.0.1" % "test"
   ))
+
+lazy val demo = project.in(file("demo"))
+    .dependsOn(quill_extensions)

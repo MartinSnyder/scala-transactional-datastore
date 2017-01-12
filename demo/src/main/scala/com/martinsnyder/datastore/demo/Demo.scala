@@ -22,12 +22,11 @@
     SOFTWARE.
 */
 
-package com.martinsnyder.datastore.quill
+package com.martinsnyder.datastore.demo
 
-import com.martinsnyder.datastore.{ DataStore, EqualsCondition }
 import com.martinsnyder.datastore.quill.Data.Person
-import com.martinsnyder.datastore.quill.loose.Converters
-import io.getquill.{ Literal, MirrorContext, MirrorIdiom }
+import com.martinsnyder.datastore.quill.{ Data, DataStoreContext }
+import com.martinsnyder.datastore.{ DataStore, EqualsCondition }
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -50,28 +49,24 @@ object Demo {
       )
     }
 
-    // Execute and toss this the first time
-    Converters.warm()
-
     execute("Native query using predicate", _.withConnection(_.filter[Person](_.occupation.isEmpty)))
     execute("Native query using condition", _.withConnection(_.retrieveRecords[Person](EqualsCondition("occupation", None))))
     execute("Native query using predicate WITH index", _.withConnection(_.filter[Person](_.givenName == "Bee #91236")))
     execute("Native query using condition WITH index", _.withConnection(_.retrieveRecords[Person](EqualsCondition("givenName", "Bee #91236"))))
 
     execute("Quill query", dataStore => {
-      val ctx = new MirrorContext[MirrorIdiom, Literal]
+      val ctx = new DataStoreContext(dataStore)
       import ctx._
-      import com.martinsnyder.datastore.quill.loose.Converters._
 
-      dataStore.withConnection(_.retrieveRecords[Person](quote { query[Person].filter(_.occupation == None) }))
+      //      Try(ctx.run(quote { query[Person].filter(_.occupation == None) }))
+      Try(ctx.run(quote { query[Person].filter(_.givenName == "Bee #91232") }))
     })
 
     execute("Quill query WITH index", dataStore => {
-      val ctx = new MirrorContext[MirrorIdiom, Literal]
+      val ctx = new DataStoreContext(dataStore)
       import ctx._
-      import com.martinsnyder.datastore.quill.loose.Converters._
 
-      dataStore.withConnection(_.retrieveRecords[Person](quote { query[Person].filter(_.givenName == "Bee #91232") }))
+      Try(ctx.run(quote { query[Person].filter(_.givenName == "Bee #91232") }))
     })
   }
 }

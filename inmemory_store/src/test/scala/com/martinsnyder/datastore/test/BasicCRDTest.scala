@@ -69,7 +69,7 @@ abstract class AbstractBasicCRDTest extends FunSpec {
 
     it("can retrieve records") {
       // Read all records
-      val retrievedAll = dataStore.withConnection(_.retrieveRecords[TestRecord](AllCondition))
+      val retrievedAll = dataStore.withConnection(_.retrieveRecords[TestRecord](AllCondition()))
       assert(retrievedAll == Success(SampleRecords))
 
       // Make sure that we can read the record we just inserted
@@ -87,7 +87,7 @@ abstract class AbstractBasicCRDTest extends FunSpec {
       assert(retrieved == Success(Seq()))
 
       // Verify that only the second record is available in the store
-      val retrievedJustSecond = dataStore.withConnection(_.retrieveRecords[TestRecord](AllCondition))
+      val retrievedJustSecond = dataStore.withConnection(_.retrieveRecords[TestRecord](AllCondition()))
       assert(retrievedJustSecond == Success(Seq(SecondSampleRecord)))
     }
   }

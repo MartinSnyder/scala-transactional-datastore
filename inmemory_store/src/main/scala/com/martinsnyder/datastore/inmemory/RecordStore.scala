@@ -33,7 +33,7 @@ import scala.util.Try
 object RecordStore {
   implicit def conditionToPredicate(condition: Condition): Record => Boolean = {
     condition match {
-      case AllCondition =>
+      case AllCondition() =>
         _ => true
 
       case ExactMatchCondition(matchRecords) =>

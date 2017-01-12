@@ -28,7 +28,7 @@ package com.martinsnyder.datastore
 sealed trait Condition
 
 // Matches all records
-case object AllCondition extends Condition
+case class AllCondition() extends Condition
 
 // Matches all records where the record's value for the specified field matches
 case class EqualsCondition[T](fieldName: String, value: T) extends Condition

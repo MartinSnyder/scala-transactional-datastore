@@ -22,31 +22,29 @@
     SOFTWARE.
 */
 
-package com.martinsnyder.datastore.quill.loose
+package com.martinsnyder.datastore.quill
 
-import com.martinsnyder.datastore.quill.loose
-import com.martinsnyder.datastore.{ Condition, EqualsCondition }
+import com.martinsnyder.datastore.{ AllCondition, Condition, EqualsCondition }
+import io.getquill.NamingStrategy
 import io.getquill.ast.{ Ast, BinaryOperation, Constant, EqualityOperator, Filter, Property }
+import io.getquill.idiom.{ Idiom, Statement, StringToken }
 
 import scala.annotation.tailrec
-import scala.language.{ implicitConversions, reflectiveCalls }
-import scala.reflect.runtime.currentMirror
-import scala.tools.reflect.ToolBox
+import scala.language.implicitConversions
 
-object Converters {
-  type AstProvider = { def ast: Ast }
+class ConditionIdiom extends Idiom {
+  // Format for String.format
+  override def liftingPlaceholder(index: Int): String = "%" + index + "s"
 
-  def warm(): Unit = {
-    val toolbox = currentMirror.mkToolBox()
-    toolbox.eval(toolbox.parse("5"))
+  override def emptyQuery: String = ConditionSerializer.serialize(AllCondition())
+
+  override def prepareForProbing(string: String): String = string
+
+  override def translate(ast: Ast)(implicit naming: NamingStrategy): (Ast, Statement) = {
+    val condition = toCondition(ast)
+
+    (ast, Statement(List(StringToken(ConditionSerializer.serialize(condition)))))
   }
-
-  /*
-   * Use duck typing because the trait we want to use (Quoted) is not available statically, only
-   * as a type member of a Context instance
-   */
-  implicit def toCondition(astProvider: AstProvider): Condition =
-    loose.Converters.toCondition(astProvider.ast)
 
   @tailrec
   private def toCondition(ast: Ast): Condition =
@@ -57,11 +55,13 @@ object Converters {
       case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, Constant(v)) =>
         EqualsCondition(attributeName, v)
 
-      case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, Property(_, value)) =>
-        val toolbox = currentMirror.mkToolBox()
-        EqualsCondition(attributeName, toolbox.eval(toolbox.parse(value.toString)))
+      case map: io.getquill.ast.Map =>
+        println(map: io.getquill.ast.Map)
+        toCondition(map.query)
 
       case _ =>
         ???
     }
 }
+
+object ConditionIdiom extends ConditionIdiom
