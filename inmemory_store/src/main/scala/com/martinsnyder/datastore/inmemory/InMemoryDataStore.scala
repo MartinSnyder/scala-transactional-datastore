@@ -40,7 +40,7 @@ class InMemoryDataStore(constraints: Seq[Constraint]) extends DataStore {
     /**
      * Load records from the store.
      */
-    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
       recordStore.retrieveRecords(condition)
 
     def filter[T <: Record](predicate: T => Boolean)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
@@ -62,7 +62,7 @@ class InMemoryDataStore(constraints: Seq[Constraint]) extends DataStore {
     private val transactionStore = initialRecordStore.copy
     private var transactionLog: List[Operation] = Nil
 
-    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
+    override def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
       transactionStore.retrieveRecords(condition)
 
     def filter[T <: Record](predicate: T => Boolean)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =

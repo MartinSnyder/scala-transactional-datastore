@@ -27,17 +27,21 @@ package com.martinsnyder.datastore.quill
 import java.time.LocalDate
 import java.util.Date
 
-import Data.Person
-import com.martinsnyder.datastore.{ AllCondition, Condition, DataStore, Record }
+import com.martinsnyder.datastore.{ Condition, DataStore, EqualsCondition, Record }
 import io.getquill.Literal
 import io.getquill.context.Context
 
+import scala.reflect.ClassTag
 import scala.util.Try
 
-class DataStoreContext(dataStore: DataStore)
+class DataStoreContext(dataStore: DataStore, recordClasses: Traversable[Class[_ <: Record]])
     extends Context[ConditionIdiom, Literal]
     with Encoders
     with Decoders {
+
+  val recordTypes: Map[String, Class[_ <: Record]] = recordClasses
+    .map(recordClass => recordClass.getSimpleName -> recordClass)
+    .toMap
 
   type PrepareRow = Condition
   type ResultRow = Record
@@ -58,14 +62,16 @@ class DataStoreContext(dataStore: DataStore)
   }
 
   def executeQuery[T](
-    conditionJson: String,
+    queryJson: String,
     prepare: PrepareRow => PrepareRow = identity,
     extractor: Record => T = identity[Record] _
   ): List[T] = {
-    val condition = prepare(ConditionSerializer.deserialize(conditionJson))
+    val compiledQuery = ConditionSerializer.deserializeQuery(queryJson)
+    val runtimeQuery = compiledQuery.copy(condition = prepare(compiledQuery.condition))
+    val recordClass = recordTypes.getOrElse(runtimeQuery.typeName, throw new Exception(s"Cannot map ${runtimeQuery.typeName} to a DataStore class"))
 
     dataStore
-      .withConnection(_.retrieveRecords[Person](condition))
+      .withConnection(_.retrieveRecords(runtimeQuery.condition)(ClassTag(recordClass)))
       .get
       .toList
       .map(_.asInstanceOf[T])
@@ -75,19 +81,21 @@ class DataStoreContext(dataStore: DataStore)
 trait Encoders { this: DataStoreContext =>
   type Encoder[T] = DataStoreEncoder[T]
 
-  case class DataStoreEncoder[T](head: Condition = AllCondition()) extends BaseEncoder[T] {
+  case class DataStoreEncoder[T]() extends BaseEncoder[T] {
     override def apply(index: Int, value: T, condition: Condition): Condition = {
-      head match {
-        case AllCondition() =>
-          condition
+      condition match {
+        case EqualsCondition(fieldName, placeholder) if placeholder == s"!!$index" =>
+          // Replace lift placeholder
+          EqualsCondition(fieldName, value)
 
         case _ =>
-          ???
+          // Return unmodified
+          condition
       }
     }
   }
 
-  implicit def mappedEncoder[I, O](implicit mapped: MappedEncoding[I, O], e: Encoder[O]): Encoder[I] = ???
+  implicit def mappedEncoder[I, O](implicit mapped: MappedEncoding[I, O], e: Encoder[O]): Encoder[I] = throw new NotImplementedError
 
   implicit def optionEncoder[T](implicit d: Encoder[T]): Encoder[Option[T]] = DataStoreEncoder()
   implicit val stringEncoder: Encoder[String] = DataStoreEncoder()
@@ -110,11 +118,11 @@ trait Decoders { this: DataStoreContext =>
   // We will never invoke our decoders for DataStore records because they are already in the correct format
   case class DataStoreDecoder[T]() extends BaseDecoder[T] {
     override def apply(index: Index, record: Record): T = {
-      ???
+      throw new NotImplementedError
     }
   }
 
-  implicit def mappedDecoder[I, O](implicit mapped: MappedEncoding[I, O], d: Decoder[I]): Decoder[O] = ???
+  implicit def mappedDecoder[I, O](implicit mapped: MappedEncoding[I, O], d: Decoder[I]): Decoder[O] = throw new NotImplementedError
 
   implicit def optionDecoder[T](implicit d: Decoder[T]): Decoder[Option[T]] = DataStoreDecoder()
   implicit val stringDecoder: Decoder[String] = DataStoreDecoder()

@@ -22,9 +22,7 @@
     SOFTWARE.
 */
 
-package com.martinsnyder.datastore.quill
-
-import java.time.LocalDate
+package com.martinsnyder.datastore.demo
 
 import com.martinsnyder.datastore.inmemory.InMemoryDataStore
 import com.martinsnyder.datastore.{ DataStore, Record, UniqueConstraint }
@@ -32,17 +30,19 @@ import com.martinsnyder.datastore.{ DataStore, Record, UniqueConstraint }
 import scala.util.Try
 
 object Data {
-  val numberWorkerBees = 1000000
+  val numberWorkerBees = 2500000 // 2.5 Million
 
-  case class Person(givenName: String, familyName: String, birthday: LocalDate, occupation: Option[String]) extends Record
+  case class Person(id: Int, givenName: String, familyName: String) extends Record {
+    override def toString: String = s"$givenName $familyName #$id"
+  }
 
   private val initialPeople = Seq(
-    Person("Abe", "Allen", LocalDate.of(1960, 1, 1), None),
-    Person("Betsy", "Baker", LocalDate.of(1970, 2, 2), Some("Accountant"))
+    Person(numberWorkerBees + 1000, "Abe", "Allen"),
+    Person(numberWorkerBees + 2000, "Betsy", "Baker")
   )
 
   def sampleDataStore: DataStore = {
-    val dataStore = new InMemoryDataStore(Seq(UniqueConstraint(classOf[Person].getName, "givenName")))
+    val dataStore = new InMemoryDataStore(Seq(UniqueConstraint(classOf[Person].getName, "id")))
 
     dataStore.withConnection(_.inTransaction(conn => Try({
       conn.createRecords(initialPeople)
@@ -51,7 +51,7 @@ object Data {
     // Create some worker bees
     dataStore.withConnection(_.inTransaction(conn => Try({
       conn.createRecords(
-        (1 to numberWorkerBees).map(number => Person(s"Bee #$number", "Worker", LocalDate.now, Some("Busywork")))
+        (1 to numberWorkerBees).map(number => Person(number, s"Worker", "Bee"))
       )
     })))
 

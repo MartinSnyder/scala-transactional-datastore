@@ -24,23 +24,27 @@
 
 package com.martinsnyder.datastore.demo
 
-import com.martinsnyder.datastore.quill.Data.Person
-import com.martinsnyder.datastore.quill.{ Data, DataStoreContext }
-import com.martinsnyder.datastore.{ DataStore, EqualsCondition }
+import com.martinsnyder.datastore.demo.Data.Person
+import com.martinsnyder.datastore.quill.DataStoreContext
+import com.martinsnyder.datastore.{ DataStore, EqualsCondition, Record }
 
 import scala.language.implicitConversions
 import scala.util.Try
 
 object Demo {
   def main(args: Array[String]): Unit = {
-
     val dataStore = Data.sampleDataStore
 
-    def execute(description: String, f: DataStore => Try[Seq[Person]]): Unit = {
+    def execute(description: String, f: DataStore => Try[Seq[Record]]): Unit = {
+      // Execute and throw away the result so that our timing doesn't incur any startup costs
+      f(dataStore)
+
+      // Execute again and time the result
       val start = System.currentTimeMillis()
-      val names: Try[Seq[String]] = f(dataStore).map(_.map(person => s"${person.givenName} ${person.familyName}"))
+      val names: Try[Seq[String]] = f(dataStore).map(_.map(_.toString))
       val duration = System.currentTimeMillis() - start
 
+      // Emit the result
       println(
         s"""$description
            |===========
@@ -49,24 +53,25 @@ object Demo {
       )
     }
 
-    execute("Native query using predicate", _.withConnection(_.filter[Person](_.occupation.isEmpty)))
-    execute("Native query using condition", _.withConnection(_.retrieveRecords[Person](EqualsCondition("occupation", None))))
-    execute("Native query using predicate WITH index", _.withConnection(_.filter[Person](_.givenName == "Bee #91236")))
-    execute("Native query using condition WITH index", _.withConnection(_.retrieveRecords[Person](EqualsCondition("givenName", "Bee #91236"))))
+    execute("Native query using predicate", _.withConnection(_.filter[Person](_.familyName == "Allen")))
+    execute("Native query using condition", _.withConnection(_.retrieveRecords[Person](EqualsCondition("familyName", "Allen"))))
+    execute("Native query using predicate WITH index", _.withConnection(_.filter[Person](_.id == 1)))
+    execute("Native query using condition WITH index", _.withConnection(_.retrieveRecords[Person](EqualsCondition("id", 1))))
 
     execute("Quill query", dataStore => {
-      val ctx = new DataStoreContext(dataStore)
+      val ctx = new DataStoreContext(dataStore, List(classOf[Person]))
       import ctx._
 
-      //      Try(ctx.run(quote { query[Person].filter(_.occupation == None) }))
-      Try(ctx.run(quote { query[Person].filter(_.givenName == "Bee #91232") }))
+      val familyNameToFind = "Allen"
+
+      Try(ctx.run(quote { query[Person].filter(_.familyName == lift(familyNameToFind)) }))
     })
 
     execute("Quill query WITH index", dataStore => {
-      val ctx = new DataStoreContext(dataStore)
+      val ctx = new DataStoreContext(dataStore, List(classOf[Person]))
       import ctx._
 
-      Try(ctx.run(quote { query[Person].filter(_.givenName == "Bee #91232") }))
+      Try(ctx.run(quote { query[Person].filter(_.id == 1) }))
     })
   }
 }

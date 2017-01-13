@@ -59,12 +59,11 @@ class RecordStore(storedRecords: List[Record], enforcers: List[ConstraintEnforce
   /**
    * Load records from the store.
    */
-  def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
+  def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
     queryConstraints[T](condition).map({
       case None =>
         storedRecords
           .filter(_.getClass == recordTag.runtimeClass)
-          .map(_.asInstanceOf[T])
           .filter(condition)
 
       case Some(results) =>

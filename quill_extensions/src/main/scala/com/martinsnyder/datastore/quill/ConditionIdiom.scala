@@ -26,41 +26,70 @@ package com.martinsnyder.datastore.quill
 
 import com.martinsnyder.datastore.{ AllCondition, Condition, EqualsCondition }
 import io.getquill.NamingStrategy
-import io.getquill.ast.{ Ast, BinaryOperation, Constant, EqualityOperator, Filter, Property }
-import io.getquill.idiom.{ Idiom, Statement, StringToken }
+import io.getquill.ast.{ Ast, BinaryOperation, Constant, Entity, EqualityOperator, Filter, Property, ScalarValueLift }
+import io.getquill.idiom.{ Idiom, ScalarLiftToken, Statement, StringToken, Token }
 
 import scala.annotation.tailrec
 import scala.language.implicitConversions
 
 class ConditionIdiom extends Idiom {
-  // Format for String.format
-  override def liftingPlaceholder(index: Int): String = "%" + index + "s"
+  override def liftingPlaceholder(index: Int): String = s"!!$index"
 
   override def emptyQuery: String = ConditionSerializer.serialize(AllCondition())
 
   override def prepareForProbing(string: String): String = string
 
   override def translate(ast: Ast)(implicit naming: NamingStrategy): (Ast, Statement) = {
-    val condition = toCondition(ast)
+    ast match {
+      case io.getquill.ast.Map(Filter(Entity(typeName, _), _, body), _, _) =>
+        val (condition, liftings) = toCondition(ast, Nil)
 
-    (ast, Statement(List(StringToken(ConditionSerializer.serialize(condition)))))
+        val preludeTokens: List[Token] = List(
+          StringToken(s"""{ "typeName": "$typeName", "condition": """),
+          StringToken(ConditionSerializer.serialize(condition)),
+          StringToken(s""", "liftings": [""")
+        )
+
+        val liftingTokens: List[Token] = liftings
+          .flatMap(svl => List(
+            StringToken(","), // Put the delimiting comma in the leading position
+            StringToken("\""),
+            ScalarLiftToken(svl),
+            StringToken("\"")
+          )) match {
+            case Nil => Nil
+            case tokens => tokens.tail // Strip off the "head" of this list, which is the incorrect first comma
+          }
+
+        val postludeTokens: List[Token] = List(
+          StringToken(s"""] }""")
+        )
+
+        (ast, Statement(List(preludeTokens, liftingTokens, postludeTokens).flatten))
+
+      case _ =>
+        throw new Exception(s"Unexpected top-level ast: ${ast.getClass.getName}\n${ast.toString}")
+    }
   }
 
   @tailrec
-  private def toCondition(ast: Ast): Condition =
+  private def toCondition(ast: Ast, liftedValues: List[ScalarValueLift]): (Condition, List[ScalarValueLift]) =
     ast match {
-      case filter: Filter =>
-        toCondition(filter.body)
+      case Filter(Entity(className, props), _, body) =>
+        toCondition(body, liftedValues)
 
       case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, Constant(v)) =>
-        EqualsCondition(attributeName, v)
+        (EqualsCondition(attributeName, v), liftedValues)
+
+      case BinaryOperation(Property(_, attributeName), EqualityOperator.`==`, svl: ScalarValueLift) =>
+        val placeholder = liftingPlaceholder(liftedValues.size)
+        (EqualsCondition(attributeName, placeholder), liftedValues ::: List(svl))
 
       case map: io.getquill.ast.Map =>
-        println(map: io.getquill.ast.Map)
-        toCondition(map.query)
+        toCondition(map.query, liftedValues)
 
-      case _ =>
-        ???
+      case other =>
+        throw new Exception(s"Cannot convert ast to condition: ${other.getClass.getName}\n${other.toString}")
     }
 }
 

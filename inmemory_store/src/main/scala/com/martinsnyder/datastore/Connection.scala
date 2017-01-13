@@ -34,7 +34,7 @@ trait ReadConnection extends Connection {
   /**
    * Load records from the store.
    */
-  def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]]
+  def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]]
 
   /**
    * Load records using a predicate.

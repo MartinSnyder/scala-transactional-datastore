@@ -58,5 +58,7 @@ object ConditionSerializer {
   def serialize(condition: Condition): String = json.writeValueAsString(condition)
 
   def deserialize(condition: String): Condition = json.readValue(condition, classOf[Condition])
+
+  def deserializeQuery(query: String): DataStoreQuery = json.readValue(query, classOf[DataStoreQuery])
 }
 

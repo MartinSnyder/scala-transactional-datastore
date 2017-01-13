@@ -41,7 +41,7 @@ class MutableRecordStore(private var recordStore: RecordStore) {
   /**
    * Load records from the store.
    */
-  def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[T]] =
+  def retrieveRecords[T <: Record](condition: Condition)(implicit recordTag: ClassTag[T]): Try[Seq[Record]] =
     recordStore.retrieveRecords(condition)
 
   /**
