@@ -165,6 +165,51 @@ ctx
                 </section>
 
                 <section>
+                    <h2>Unimplemented Quill Features</h2>
+                    <ul>
+                        <li>Probing</li>
+                        <li>Result transformation</li>
+                        <li>Naming algorithms</li>
+                    </ul>
+                    <aside class="notes">
+                        <ul>
+                            <li>No value to these since we are entirely in-memory</li>
+                            <li>Probing can be turned on/off</li>
+                            <li>More information on this topic available online</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Comparison with Slick</h2>
+                    <ul>
+                        <li>Pro: No need for quill-specific classes/structures</li>
+                        <li>Pro: Uses standard scala operators like ==</li>
+                        <li>Con: No schema creation ability</li>
+                        <li>Con: Not as many supported use cases</li>
+                    </ul>
+                    <aside class="notes">
+                        <ul>
+                            <li>More information on this topic available online</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Where/how to use quill</h2>
+                    <ul>
+                        <li>Replace non-type safe query construction</li>
+                        <li>Leverage "probe" to syntax/type check queries</li>
+                        <li>Reduce code size vs. Slick for certain use cases</li>
+                    </ul>
+                    <aside class="notes">
+                        <ul>
+
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
                     <h2>Gotchas</h2>
                     <ul>
                         <li>Undetected code dependencies</li>
@@ -201,10 +246,6 @@ ctx
 				</section>
 			</div>
 		</div>
-
-        <!--
-        Any spot where you have query constructs so you can generate/execute something
-        -->
 
 		<script src="lib/js/head.min.js"></script>
 		<script src="js/reveal.js"></script>
