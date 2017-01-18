@@ -53,10 +53,11 @@ object Demo {
       )
     }
 
-    execute("Native query using predicate", _.withConnection(_.filter[Person](_.familyName == "Allen")))
-    execute("Native query using condition", _.withConnection(_.retrieveRecords[Person](EqualsCondition("familyName", "Allen"))))
-    execute("Native query using predicate WITH index", _.withConnection(_.filter[Person](_.id == 1)))
-    execute("Native query using condition WITH index", _.withConnection(_.retrieveRecords[Person](EqualsCondition("id", 1))))
+    execute("Predicate query", _.withConnection(_.filter[Person](_.familyName == "Allen")))
+    execute("Predicate query WITH index", _.withConnection(_.filter[Person](_.id == 1)))
+
+    execute("Condition query", _.withConnection(_.retrieveRecords[Person](EqualsCondition("familyName", "Allen"))))
+    execute("Condition query WITH index", _.withConnection(_.retrieveRecords[Person](EqualsCondition("id", 1))))
 
     execute("Quill query", dataStore => {
       val ctx = new DataStoreContext(dataStore, List(classOf[Person]))
@@ -64,7 +65,7 @@ object Demo {
 
       val familyNameToFind = "Allen"
 
-      Try(ctx.run(quote { query[Person].filter(_.familyName == lift(familyNameToFind)) }))
+      Try(ctx.run(quote { query[Person].filter(_.familyName == "Allen") }))
     })
 
     execute("Quill query WITH index", dataStore => {

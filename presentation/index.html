@@ -30,6 +30,7 @@
 						<small><a href="http://martinsnyder.net">Martin Snyder</a> / <a href="https://twitter.com/MartinSnyder">@MartinSnyder</a> / <a href="http://wingspan.com">Wingspan Technology, Inc.</a></small>
 					</p>
                     <aside class="notes">
+                        Wingspan creates document management applications for regulated industries
                     </aside>
 				</section>
 
@@ -42,6 +43,7 @@
 					</ul>
                     <aside class="notes">
                         <ul>
+                            <li>Scala mechanics</li>
                             <li>Applied Functional Programming</li>
                             <li>Database implementation concepts</li>
                         </ul>
@@ -50,78 +52,131 @@
 
                 <section>
                     <h2>Our data set</h2>
-<pre><code class="scala">case class Person(
-  givenName: String,
-  familyName: String,
-  birthday: LocalDate,
-  occupation: Option[String]) extends Record
+<pre><code class="scala">case class Person(id: Int, givenName: String, familyName: String)
+  extends Record
 
 val dataStore = new InMemoryDataStore(Seq(
-  UniqueConstraint(classOf[Person].getName, "givenName")))
+  UniqueConstraint(classOf[Person].getName, "id")))
+
+val numberWorkerBees = 2500000 // 2.5 Million
+dataStore...createRecords(
+  (1 to numberWorkerBees)
+    .map(number => Person(number, s"Worker", "Bee"))
+)
 
 dataStore...createRecords(Seq(
-  Person("Abe", "Allen", LocalDate.of(1960, 1, 1),
-    None),
-  Person("Betsy", "Baker", LocalDate.of(1970, 2, 2),
-    Some("Accountant"))
-))
-
-dataStore...createRecords((1 to 1000000)
-  .map(number => Person(s"Bee #$number", "Worker", LocalDate.now,
-    Some("Busywork")))
-)</code></pre>
+  Person(numberWorkerBees + 1000, "Abe", "Allen"),
+  Person(numberWorkerBees + 2000, "Betsy", "Baker")
+))</code></pre>
                     <aside class="notes">
+                        <ul>
+                            <li>Key element for this presentation is the unique constraint</li>
+                        </ul>
                     </aside>
                 </section>
 
                 <section>
-                    <h2>Example 1 - Scala Predicates</h2>
+                    <h2>Technique 1 - Scala Predicates</h2>
                     <pre><code class="scala">connection
   .filter[Person](
-    person => person.occupation.isEmpty
+    _.familyName == "Allen")
   )
->> 116 mSecs: Success(List(Abe Allen))
+>> 121 mSecs: Success(List(Abe Allen #2501000))
 
 connection
   .filter[Person](
-    person => person.givenName == "Bee #91236"
+    _.id == 1
   )
->> 102 mSecs: Success(List(Bee #91236 Worker))</code></pre>
+>> 121 mSecs: Success(List(Worker Bee #1))</code></pre>
                     <aside class="notes">
+                        <ul>
+                            <li>Type safe</li>
+                            <li>Equivalent to a full table scan in both cases -- all records are examined</li>
+                        </ul>
                     </aside>
                 </section>
 
                 <section>
-                    <h2>Example 2 - "Conditions" API</h2>
+                    <h2>Technique 2 - "Conditions" API</h2>
                     <pre><code class="scala">connection
   .retrieveRecords[Person](
-    EqualsCondition("occupation", None)
+    EqualsCondition("familyName", "Allen")
   )
->> 490 mSecs: Success(List(Abe Allen))
+>> 815 mSecs: Success(List(Abe Allen #2501000))
 
 connection
   .retrieveRecords[Person](
-    EqualsCondition("givenName", "Bee #91236")
+    EqualsCondition("id", 1)
   )
->> 2 mSecs: Success(List(Bee #91236 Worker))</code></pre>
+>> 0 mSecs: Success(List(Worker Bee #1))</code></pre>
                     <aside class="notes">
+                        <ul>
+                            <li>Not type safe</li>
+                            <li>Query representation can be examined and index lookup substituted for table scan</li>
+                            <li>Performance disparity due to use of relection</li>
+                        </ul>
                     </aside>
                 </section>
 
                 <section>
-                    <h2>Example 3 - Quill</h2>
-                    <pre><code class="scala">connection
-  .retrieveRecords[Person](
-    quote { query[Person].filter(_.occupation == None) }
-  )
->> 810 mSecs: Success(List(Abe Allen))
+                    <h2>Technique 3 - Quill</h2>
+                    <pre><code class="scala">ctx
+  .run(quote {
+    query[Person].filter(_.familyName == "Allen")
+  })
+>> 706 mSecs: Success(List(Abe Allen #2501000))
 
-connection
-  .retrieveRecords[Person](
-    quote { query[Person].filter(_.givenName == "Bee #91232") }
-  )
->> 3 mSecs: Success(List(Bee #91232 Worker))</code></pre>
+ctx
+  .run(quote {
+    query[Person].filter(_.id == 1)
+  })
+>> 1 mSecs: Success(List(Worker Bee #1))</code></pre>
                     <aside class="notes">
+                        <ul>
+                            <li>Type safe</li>
+                            <li>Compiles directly to "Condition" objects</li>
+                            <li>Best of both worlds</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Summary</h2>
+                    <table>
+                        <thead>
+                            <tr><td></td><td>Predicates</td><td>Conditions</td><td>Quill</td></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Full Scan</td><td><span style="color: green">~125</span></td><td><span style="color: red">~750</span></td><td><span style="color: green">~750</span></td></tr>
+                            <tr><td>Index</td><td><span style="color: green">~125</span></td><td><span style="color: red">~0</span></td><td><span style="color: green">~0</span></td></tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    <div style="text-align: left">
+                        * Times in milliseconds<br>
+                        * Green indicates type-safe
+                    </div>
+
+                    <aside class="notes">
+                        <ul>
+                            <li>Also, conditions are generally serializable (REST, etc...), and predicates are not</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Gotchas</h2>
+                    <ul>
+                        <li>Undetected code dependencies</li>
+                        <li>Debugging macros</li>
+                        <li>High knowledge barrier</li>
+                    </ul>
+                    <aside class="notes">
+                        <ul>
+                            <li>Changing quill elements doesn't force recompilation of quoted regions</li>
+                            <li>Debugging Macros is hard, add .dynamic to quotes to switch to runtime compilation</li>
+                            <li>Significant challenges if you don't already know Scala AST</li>
+                        </ul>
                     </aside>
                 </section>
 
@@ -149,12 +204,6 @@ connection
 
         <!--
         Any spot where you have query constructs so you can generate/execute something
-
-        these things don't serialize
-
-        need to rebuild all
-        debugging macros
-        knowledge of Scala compiler / AST
         -->
 
 		<script src="lib/js/head.min.js"></script>
