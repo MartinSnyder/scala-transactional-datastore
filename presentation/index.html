@@ -165,6 +165,79 @@ ctx
                 </section>
 
                 <section>
+                    <h2>A Closer Look</h2>
+                    <pre><code class="scala">val dataStore = Data.sampleDataStore
+val ctx = new DataStoreContext(dataStore, List(classOf[Person]))
+import ctx._
+
+val compiledQuery = quote { query[Person].filter(_.id == 1) }
+val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
+                    <aside class="notes">
+                        <ul>
+                            <li>quote is the "compile time" element</li>
+                            <li>ctx.run is the runtime execution</li>
+                            <li>Do NOT add a type to compiledQuery, it will probably force runtime compilation</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Context - The Runtime Element</h2>
+                    <pre><code class="scala">class DataStoreContext(
+  dataStore: DataStore,
+  recordClasses: Traversable[Class[_ &lt;: Record]])
+    extends Context[ConditionIdiom, Literal]
+    with Encoders
+    with Decoders {
+
+  def executeQuery[T](
+    queryJson: String,
+    prepare: PrepareRow => PrepareRow = identity,
+    extractor: Record => T = identity[Record] _
+  ): List[T] = {
+    dataStore
+      .withConnection(_.retrieveRecords(toCondition(queryJson))
+  }
+}</code></pre>
+                    <aside class="notes">
+                        <ul>
+                            <li>quote is the "compile time" element</li>
+                            <li>ctx.run is the runtime execution</li>
+                            <li>Do NOT add a type to compiledQuery, it will probably force runtime compilation</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Idiom - The Compile Time Element</h2>
+                    <pre><code class="scala">class ConditionIdiom extends Idiom {
+  override def translate(ast: Ast): (Ast, Statement) = {
+    val condition = ast match {
+      case BinaryOperation(
+            Property(_, attributeName),
+            EqualityOperator.`==`,
+            Constant(v)) =>
+        EqualsCondition(attributeName, v)
+    }
+
+    (ast, StringToken(toJson(condition)))
+  }
+}</code></pre>
+                    <aside class="notes">
+                        <ul>
+                            <li>Simplified version of this class (including pseudocode)</li>
+                            <li>Highlights code that is triggered in our example</li>
+                            <li>Quill-specific AST used to limit exposure to supported AST</li>
+                            <li>Quill API forces us to represent out query as a string</li>
+                        </ul>
+                    </aside>
+                </section>
+
+
+
+
+
+                <section>
                     <h2>Unimplemented Quill Features</h2>
                     <ul>
                         <li>Probing</li>
