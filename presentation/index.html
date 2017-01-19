@@ -182,33 +182,6 @@ val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
                 </section>
 
                 <section>
-                    <h2>Context - The Runtime Element</h2>
-                    <pre><code class="scala">class DataStoreContext(
-  dataStore: DataStore,
-  recordClasses: Traversable[Class[_ &lt;: Record]])
-    extends Context[ConditionIdiom, Literal]
-    with Encoders
-    with Decoders {
-
-  def executeQuery[T](
-    queryJson: String,
-    prepare: PrepareRow => PrepareRow = identity,
-    extractor: Record => T = identity[Record] _
-  ): List[T] = {
-    dataStore
-      .withConnection(_.retrieveRecords(toCondition(queryJson))
-  }
-}</code></pre>
-                    <aside class="notes">
-                        <ul>
-                            <li>quote is the "compile time" element</li>
-                            <li>ctx.run is the runtime execution</li>
-                            <li>Do NOT add a type to compiledQuery, it will probably force runtime compilation</li>
-                        </ul>
-                    </aside>
-                </section>
-
-                <section>
                     <h2>Idiom - The Compile Time Element</h2>
                     <pre><code class="scala">class ConditionIdiom extends Idiom {
   override def translate(ast: Ast): (Ast, Statement) = {
@@ -233,9 +206,136 @@ val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
                     </aside>
                 </section>
 
+                <section>
+                    <h2>Context - The Runtime Element</h2>
+                    <pre><code class="scala">class DataStoreContext(
+  dataStore: DataStore,
+  recordClasses: Traversable[Class[_ &lt;: Record]])
+    extends Context[ConditionIdiom, Literal] with Encoders, with Decoders {
 
+  def executeQuery[T](queryJson: String,
+                      prepare: PrepareRow => PrepareRow,
+                      extractor: Record => T): List[T] = {
+    val query = toQuery(queryJson)
+    dataStore
+      .withConnection(
+        _.retrieveRecords(query.condition)
+      )(query.recordType)
+  }
+}</code></pre>
+                    <aside class="notes">
+                        <ul>
+                            <li>quote is the "compile time" element</li>
+                            <li>ctx.run is the runtime execution</li>
+                            <li>Do NOT add a type to compiledQuery, it will probably force runtime compilation</li>
+                        </ul>
+                    </aside>
+                </section>
 
+                <section>
+                    <h2>Application of runtime values</h2>
+                    <pre><code class="scala">def getPersonById(dataStore: DataStore, id: Int): Option[Person] = {
+  val ctx = new DataStoreContext(dataStore, List(classOf[Person]))
+  import ctx._
 
+  ctx
+    .run(quote { query[Person].filter(_.id == lift(id)) })
+    .headOption
+}</code></pre>
+                    <aside class="notes">
+                        <ul>
+                            <li>lift is the key element</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Updated Idiom</h2>
+                    <pre><code class="scala">class ConditionIdiom extends Idiom {
+  override def translate(ast: Ast): (Ast, Statement) = {
+    val (condition, lift) = ast match {
+      case BinaryOperation(
+            Property(_, attributeName),
+            EqualityOperator.`==`,
+            svl: ScalarValueLift) =>
+
+        (EqualsCondition(attributeName, "???"), svl)
+    }
+
+    (ast, Statement(List(StringToken(toJson(condition)),
+                         ScalarLiftToken(lift)))
+  }
+}</code></pre>
+                    <aside class="notes">
+                        <ul>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Updated Context</h2>
+                    <pre><code class="scala">class DataStoreContext(
+  dataStore: DataStore,
+  recordClasses: Traversable[Class[_ &lt;: Record]])
+    extends Context[ConditionIdiom, Literal] with Encoders, with Decoders {
+
+  def executeQuery[T](queryJson: String,
+                      prepare: PrepareRow => PrepareRow,
+                      extractor: Record => T): List[T] = {
+    val query = toQuery(queryJson)
+    dataStore
+      .withConnection(
+        _.retrieveRecords(prepare(query.condition))
+      )(query.recordType)
+  }
+}</code></pre>
+                    <aside class="notes">
+                        <ul>
+                            <li>This is the same except for the "prepare" invocation which applies the encoders</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Runtime Value Encoder</h2>
+                    <pre><code class="scala">case class DataStoreEncoder[T]() extends BaseEncoder[T] {
+  override def apply(index: Int, value: T, condition: Condition): Condition = {
+    condition match {
+      case EqualsCondition(fieldName, placeholder) if placeholder == "???" =>
+        // Replace lift placeholder
+        EqualsCondition(fieldName, value)
+
+      case _ =>
+        // Return unmodified
+        condition
+    }
+  }
+}</code></pre>
+                    <aside class="notes">
+                        <ul>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Json Query Format</h2>
+                    <pre><code class="scala">{
+   "typeName":"Person",
+   "condition":{
+      "type":"eq",
+      "fieldName":"id",
+      "value":"!!0"
+   },
+   "liftings":[
+      "!!0"
+   ]
+}</code></pre>
+                    <pre><code class="scala">SELECT * FROM person WHERE id=?</code></pre>
+                    <aside class="notes">
+                        <ul>
+                        </ul>
+                    </aside>
+                </section>
 
                 <section>
                     <h2>Unimplemented Quill Features</h2>
@@ -256,6 +356,7 @@ val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
                 <section>
                     <h2>Comparison with Slick</h2>
                     <ul>
+                        <li>Compile time vs. runtime query generation</li>
                         <li>Pro: No need for quill-specific classes/structures</li>
                         <li>Pro: Uses standard scala operators like ==</li>
                         <li>Con: No schema creation ability</li>

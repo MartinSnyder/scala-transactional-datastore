@@ -63,9 +63,8 @@ class DataStoreContext(dataStore: DataStore, recordClasses: Traversable[Class[_ 
 
   def executeQuery[T](
     queryJson: String,
-    prepare: PrepareRow => PrepareRow = identity,
-    extractor: Record => T = identity[Record] _
-  ): List[T] = {
+    prepare: PrepareRow => PrepareRow,
+    extractor: Record => T): List[T] = {
     val compiledQuery = ConditionSerializer.deserializeQuery(queryJson)
     val runtimeQuery = compiledQuery.copy(condition = prepare(compiledQuery.condition))
     val recordClass = recordTypes.getOrElse(runtimeQuery.typeName, throw new Exception(s"Cannot map ${runtimeQuery.typeName} to a DataStore class"))

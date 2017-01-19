@@ -68,11 +68,13 @@ object Demo {
       Try(ctx.run(quote { query[Person].filter(_.familyName == "Allen") }))
     })
 
-    execute("Quill query WITH index", dataStore => {
+    execute("Quill query WITH index", ds => Try(getPersonById(ds, 1).toList))
+
+    def getPersonById(dataStore: DataStore, id: Int): Option[Person] = {
       val ctx = new DataStoreContext(dataStore, List(classOf[Person]))
       import ctx._
 
-      Try(ctx.run(quote { query[Person].filter(_.id == 1) }))
-    })
+      ctx.run(quote { query[Person].filter(_.id == lift(id)) }).headOption
+    }
   }
 }
