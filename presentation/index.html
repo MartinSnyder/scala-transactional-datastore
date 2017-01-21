@@ -119,6 +119,74 @@ connection
                 </section>
 
                 <section>
+                    <h2>Summary</h2>
+                    <table>
+                        <thead>
+                        <tr><td></td><td>Predicates</td><td>Conditions</td></tr>
+                        </thead>
+                        <tbody>
+                        <tr><td>Full Scan</td><td><span style="color: green">~125</span></td><td><span style="color: red">~750</span></td></tr>
+                        <tr><td>Index</td><td><span style="color: green">~125</span></td><td><span style="color: red">~0</span></td></tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    <div style="text-align: left">
+                        * Times in milliseconds<br>
+                        * Green indicates type-safe
+                    </div>
+
+                    <aside class="notes">
+                        <ul>
+                            <li>Also, conditions are generally serializable (REST, etc...), and predicates are not</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Sad Face</h2>
+                    <ul>
+                        <li>Scala predicates are a "black box" at runtime</li>
+                        <li>The answer is there, but hidden</li>
+                        <li>Many ways to perform the analysis</li>
+                    </ul>
+                    <aside class="notes">
+                        <ul>
+                            <li>Bytecode analysis</li>
+                            <li>Reflection</li>
+                            <li>Source code / compiler invocation</li>
+                            <li>Compiler plugins/macros AST</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>AST</h2>
+                    <ul>
+                        <li>Abstract Syntax Tree</li>
+                        <li>Scala compiler's intermediate structure</li>
+                        <li>Source -> AST -> Bytecode</li>
+                    </ul>
+                    <aside class="notes">
+                        <ul>
+                            <li>We need to make sure everyone understands what this is before we continue</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
+                    <h2>Quill to the rescue</h2>
+                    <img src="img/example.gif" />
+                    <aside class="notes">
+                        <ul>
+                            <li>Compile-time type checking</li>
+                            <li>Compile-time query generation</li>
+                            <li>Compile-time query verification</li>
+                            <li>Supports JDBC and Cassandra</li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section>
                     <h2>Technique 3 - Quill</h2>
                     <pre><code class="scala">ctx
   .run(quote {
@@ -159,7 +227,7 @@ ctx
 
                     <aside class="notes">
                         <ul>
-                            <li>Also, conditions are generally serializable (REST, etc...), and predicates are not</li>
+                            <li>Quill compiles to our conditions API, so we need (and depend) on that</li>
                         </ul>
                     </aside>
                 </section>
@@ -313,6 +381,7 @@ val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
 }</code></pre>
                     <aside class="notes">
                         <ul>
+                            <li>Injects values into our compiled query</li>
                         </ul>
                     </aside>
                 </section>
@@ -333,6 +402,7 @@ val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
                     <pre><code class="scala">SELECT * FROM person WHERE id=?</code></pre>
                     <aside class="notes">
                         <ul>
+                            <li>More than is necessary, but done to satisfy Quill's expectation</li>
                         </ul>
                     </aside>
                 </section>
@@ -375,10 +445,10 @@ val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
                         <li>Replace non-type safe query construction</li>
                         <li>Leverage "probe" to syntax/type check queries</li>
                         <li>Reduce code size vs. Slick for certain use cases</li>
+                        <li>Apply this concept in other areas</li>
                     </ul>
                     <aside class="notes">
                         <ul>
-
                         </ul>
                     </aside>
                 </section>
@@ -402,7 +472,7 @@ val results: Seq[Person] = ctx.run(compiledQuery)</code></pre>
                 <section>
 					<h2>Links</h2>
 					<ul>
-                        <li>Repository: <a href="https://github.com/MartinSnyder/scala-transactional-datastore">MartinSnyder/scala-transactional-datastore</a></li>
+                        <li>Repository: <a href="https://github.com/MartinSnyder/scala-transactional-datastore">https://github.com/MartinSnyder/scala-transactional-datastore</a></li>
                         <li>Quill: <a href="http://getquill.io">http://getquill.io</a></li>
                         <li>Blog: <a href="http://martinsnyder.net">http://martinsnyder.net</a></li>
 					</ul>
