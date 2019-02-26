@@ -13,5 +13,5 @@ It was also used for a presentation on attaching Quill to a non-SQL data store:
 
 Hack away if you're interested.
 
-[slides]: https://martinsnyder.net/asset/revealjs/quill.html
+[slides]: https://martinsnyder.net/presentations/revealjs/quill.html
 [presentation]: https://www.youtube.com/watch?v=E5mtBTEgmLE
